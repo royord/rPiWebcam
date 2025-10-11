@@ -12,6 +12,7 @@ Additional cameras may be needed in order to perform correct tests and developme
 - 2x - $22.00 - SD Card - https://a.co/d/71skmPG
 - 2x - $22.00 - Waterproof Case - https://a.co/d/15KyTVh
 - 1x - $14.00 - Cable Glands - https://a.co/d/e5Tha8L
+- 1x - $10.00 - Standoffs - https://a.co/d/dVZ9prH
 - ++++++++++++++++++++++++++++++++++++
 -     $420.00 Total for 2 cameras
 
