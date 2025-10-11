@@ -4,6 +4,7 @@
 _The following hardware will produce 2 mirrored camera sets, one as a primary and a second full copy as a backup.
 Additional cameras may be needed in order to perform correct tests and development platforms._
 - 2x - $55.00 - Raspberry Pi Computer - https://www.adafruit.com/product/5812
+- 2x - $22.00 - Raspberry Pi POE - https://www.pishop.us/product/poe-hat-g-compatible-with-raspberry-pi-5-cm5-5v-5a-output-802-3af-at/
 - 2x - $32.00 - Raspberry Pi HQ Camera - https://www.adafruit.com/product/4561
 - 2x - $65.00 - Raspberry Pi HQ Lens (One of the following)
     - http://adafruit.com/product/4563
