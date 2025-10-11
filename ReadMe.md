@@ -5,12 +5,9 @@ _The following hardware will produce 2 mirrored camera sets, one as a primary an
 Additional cameras may be needed in order to perform correct tests and development platforms._
 - 2x - $55.00 - Raspberry Pi Computer - https://www.adafruit.com/product/4296
 - 2x - $32.00 - Raspberry Pi Camera - https://www.adafruit.com/product/3099
-- 2x - $50.00 - 56k Modem - https://www.amazon.com/gp/product/B01MYLE06I
 - 2x - $22.00 - SD Card - https://www.amazon.com/Samsung-128GB-Class-Adapter-MB-MC128GA/dp/B06XFHQGB9
-- 2x - $12.00 - RTC - https://www.amazon.com/DollaTek-DS3231-Precision-Arduino-Raspberry/dp/B07MB8YGCR (may want to change the rtc to one that has a replacible battery.)
 - 2x - $22.00 - Waterproof Case - https://www.amazon.com/gp/product/B07PK84N5D
 - 1x - $14.00 - Cable Glands - https://www.amazon.com/TUPARKA-Waterproof-Adjustable-Connectors-Plastic/dp/B07KFCGFYF/
-- 1x - $12.00 - Food Grade Desiccant - https://www.amazon.com/6PACKS-Rechargeable-Desiccant-Packets-indicating/dp/B0781BN1BZ/
 - ++++++++++++++++++++++++++++++++++++
 -     $420.00 Total for 2 cameras
 
