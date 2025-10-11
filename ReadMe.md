@@ -1,0 +1,29 @@
+# Webcam
+
+## Hardware Needed
+_The following hardware will produce 2 mirrored camera sets, one as a primary and a second full copy as a backup.
+Additional cameras may be needed in order to perform correct tests and development platforms._
+- 2x - $55.00 - Raspberry Pi Computer - https://www.adafruit.com/product/4296
+- 2x - $32.00 - Raspberry Pi Camera - https://www.adafruit.com/product/3099
+- 2x - $50.00 - 56k Modem - https://www.amazon.com/gp/product/B01MYLE06I
+- 2x - $22.00 - SD Card - https://www.amazon.com/Samsung-128GB-Class-Adapter-MB-MC128GA/dp/B06XFHQGB9
+- 2x - $12.00 - RTC - https://www.amazon.com/DollaTek-DS3231-Precision-Arduino-Raspberry/dp/B07MB8YGCR (may want to change the rtc to one that has a replacible battery.)
+- 2x - $22.00 - Waterproof Case - https://www.amazon.com/gp/product/B07PK84N5D
+- 1x - $14.00 - Cable Glands - https://www.amazon.com/TUPARKA-Waterproof-Adjustable-Connectors-Plastic/dp/B07KFCGFYF/
+- 1x - $12.00 - Food Grade Desiccant - https://www.amazon.com/6PACKS-Rechargeable-Desiccant-Packets-indicating/dp/B0781BN1BZ/
+- ++++++++++++++++++++++++++++++++++++
+-     $420.00 Total for 2 cameras
+
+## Installing the OS
+
+- Download and install raspberry pi imager from the most recent release on the website. The following link can be used.
+  https://www.raspberrypi.com/software/
+- Choose the correct Raspberry Pi Device, choose the correct "Operating System", one of the "LITE" versions to ensure that only the needed software is installed. We will not be needing a graphical user interface, LITE removes this option.
+,select the correct storage media to flash the OS. Click "NEXT" to continue setup. ![img.png](readmeImages/piImager.png)
+- On the following select "EDIT SETTINGS" to customize the installation. ![readmeImages/OS_Settings_Apply.png](readmeImages/OS_Settings_Apply.png) Before putting the SD card into the raspberry pi computer, add a file "ssh" to the root SD card file system to enable SSH in the OS.
+- On the "GENERAL" tab configure the hostname to "webcam", username and password to a value of your choice. _Other settings may be configured as needed_ ![readmeImages/OS_General_Settings.png](readmeImages/OS_General_Setting)
+- On the "SERVICES" tab enable SSH using the access method that you prefer, the rest of the documentation will use SSH to install the needed software and services.![readmeImages/OS_Services_Enable_SSH.png](readmeImages/OS_Services_Enable_SSH.png)
+
+Additional help if needed:
+  https://www.youtube.com/watch?v=ntaXWS8Lk34
+  https://www.raspberrypi.com/documentation/computers/getting-started.html
