@@ -5,6 +5,10 @@ _The following hardware will produce 2 mirrored camera sets, one as a primary an
 Additional cameras may be needed in order to perform correct tests and development platforms._
 - 2x - $55.00 - Raspberry Pi Computer - https://www.adafruit.com/product/5812
 - 2x - $32.00 - Raspberry Pi HQ Camera - https://www.adafruit.com/product/4561
+- 2x - $ - Raspberry Pi HQ Lens (One of the following)
+    - http://adafruit.com/product/4563
+    - https://www.pishop.us/product/16mm-telephoto-lens-for-raspberry-pi-hq-camera-cs/
+    - https://www.pishop.us/product/6mm-wide-angle-lens-for-raspberry-pi-hq-camera-cs/
 - 2x - $22.00 - SD Card - https://www.amazon.com/Samsung-128GB-Class-Adapter-MB-MC128GA/dp/B06XFHQGB9
 - 2x - $22.00 - Waterproof Case - https://www.amazon.com/gp/product/B07PK84N5D
 - 1x - $14.00 - Cable Glands - https://www.amazon.com/TUPARKA-Waterproof-Adjustable-Connectors-Plastic/dp/B07KFCGFYF/
