@@ -9,9 +9,9 @@ Additional cameras may be needed in order to perform correct tests and developme
     - http://adafruit.com/product/4563
     - https://www.pishop.us/product/16mm-telephoto-lens-for-raspberry-pi-hq-camera-cs/
     - https://www.pishop.us/product/6mm-wide-angle-lens-for-raspberry-pi-hq-camera-cs/
-- 2x - $22.00 - SD Card - https://www.amazon.com/Samsung-128GB-Class-Adapter-MB-MC128GA/dp/B06XFHQGB9
-- 2x - $22.00 - Waterproof Case - https://www.amazon.com/gp/product/B07PK84N5D
-- 1x - $14.00 - Cable Glands - https://www.amazon.com/TUPARKA-Waterproof-Adjustable-Connectors-Plastic/dp/B07KFCGFYF/
+- 2x - $22.00 - SD Card - https://a.co/d/71skmPG
+- 2x - $22.00 - Waterproof Case - https://a.co/d/15KyTVh
+- 1x - $14.00 - Cable Glands - https://a.co/d/e5Tha8L
 - ++++++++++++++++++++++++++++++++++++
 -     $420.00 Total for 2 cameras
 
