@@ -184,7 +184,7 @@ class webcam:
 
         # draw the text onto the text canvas, and use black as the text color
         draw = ImageDraw.Draw(canvas)
-        draw.text((5,5), self.camera_name, self.font_color, self.font)
+        draw.text((5,5), self.camera_name, self.text_color, font)
 
         # save the blank canvas to a file
         output_dir = f"{self.output_dir}/text.{self.output_ext}"
