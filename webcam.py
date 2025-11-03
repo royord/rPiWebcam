@@ -169,10 +169,15 @@ class webcam:
 
         # sample text and font
         unicode_text = self.camera_name
-        font = ImageFont.truetype(font=f'{font_dir}/fonts/AmazeFont.otf', size=18)
+        # font_path = f'{self.script_dir}/fonts/AmazeFont.otf'
+        font_path = f'{self.script_dir}/fonts/AmazeFont.otf'
+        if self.testing == True:
+            print(font_path
 
-        # get the line size
-        text_width, text_height = font.getsize(unicode_text)
+        font = ImageFont.truetype(font=font_path, size=18)
+        left, top, right, bottom = font.getbbox(text=unicode_text, mode='string')
+        text_width = right - left
+        text_height = bottom - top
 
         # create a blank canvas with extra space between lines
         canvas = Image.new('RGB', (text_width + 10, text_height + 10), self.text_bg)
