@@ -6,15 +6,18 @@ from PIL import Image, ImageDraw, ImageFont
 
 class webcam:
     def __init__(self):
+        # Conditional import, if error we're in testing
+        try:
+            from picamera import PiCamera
+        except ImportError:
+            self.testing = True
+            pass
+
         self.output_dir = os.path.join(os.getcwd(), 'image_dir')
         self.script_dir = os.path.join(os.getcwd())
         self.testing = False
         if not self.testing:
-            print("Testing mode enabled")
-            try:
-                from picamera import PiCamera
-            except ImportError:
-                pass
+
         self._load_config()
         return
 
