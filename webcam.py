@@ -238,7 +238,8 @@ def main():
     print(piCam.file_date_string())
     # print(piCam.cam_config()['filename'])
     # print(piCam.ftpserver)
-    print(piCam.cam_time())
+    # print(piCam.cam_time())
+    piCam.create_embed_text()
     return
 
 if __name__ == "__main__":
