@@ -39,7 +39,7 @@ class webcam:
                     value = self.config.getboolean(section, key)
 
                 # Assign as instance variable (flattened namespace)
-                print(key)
+                # print(key)
                 setattr(self, key, value)  # Or: self.__dict__[key] = value
 
         # Alternative: Nested structure (e.g., self.settings = {'host': 'localhost'})
@@ -122,12 +122,12 @@ class webcam:
     #     # # print(ret)
     #     # return ret
     
-    def capture_image(self, output_dir, cam_ext):
+    def capture_image(self, output_dir, output_ext):
         """
         This method captures the image using the raspberry pi camera module
 
         :param output_dir - location that the file is going to be stored.
-        :param cam_ext - type of image tat is going to be created.
+        :param output_ext - type of image tat is going to be created.
 
         :return binary - True if everything went accordingt to plan, else False
         """
@@ -146,7 +146,7 @@ class webcam:
                 time.sleep(2)
                 baseExposure = camera.exposure_speed
                 print("base exposure found: ", str(baseExposure))
-                camera.capture(f'{self.output_dir}/camera_image.{cam_ext}')
+                camera.capture(f'{self.output_dir}/camera_image.{output_ext}')
                 print("Camera Revision:" + camera.revision)
                 camera.close()
                 return True
@@ -172,7 +172,7 @@ class webcam:
         # font_path = f'{self.script_dir}/fonts/AmazeFont.otf'
         font_path = f'{self.script_dir}/fonts/AmazeFont.otf'
         if self.testing == True:
-            print(font_path
+            print(font_path)
 
         font = ImageFont.truetype(font=font_path, size=18)
         left, top, right, bottom = font.getbbox(text=unicode_text, mode='string')
