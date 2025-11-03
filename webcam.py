@@ -197,7 +197,7 @@ class webcam:
         return True
 
 
-    def layer_text_img(self, output_dir, cam_file, cam_ext, image_file_sizea):
+    def layer_text_img(self):
         """
         Creates the output file with the camera name and time embedded (text)
 
@@ -214,10 +214,14 @@ class webcam:
 
         output_file = ''
         try:
-            background = Image.open(f'{output_dir}/camera_image.{cam_ext}')
-            img = Image.open(f'{output_dir}/text.{cam_ext}')
-            # output_file = f'{output_dir}/{cam_file}{file_date_code}.{cam_ext}'
-            output_file = f'{output_dir}/{cam_file}{self.file_date_string()}.{cam_ext}'
+            if self.testing:
+                fallback_path = os.path.join(self.script_dir,'image_dir','mountain-stream-in-forest.jpg')
+                background = Image.open(fallback_path)
+            else:
+                background = Image.open(f'{self.output_dir}/camera_image.{self.output_ext}')
+            img = Image.open(f'{self.output_dir}/text.{self.output_ext}')
+            # output_file = f'{self.output_dir}/{filename}{file_date_code}.{output_ext}'
+            output_file = f'{self.output_dir}/{self.filename}{self.file_date_string()}.{self.output_ext}'
             offset = (0, 0)
             background.paste(img, offset)
             # print(f"Saving {output_file}...")
@@ -233,13 +237,69 @@ class webcam:
             print(ex)
         return output_file
 
+    def image_file_size(file_name, w, h, kb):
+        """
+        This function is used to ensure consistent file size output if needed by the application.
+
+        This will ensure that the time to transfer an image is theoretically the same on a daily/upload basis.
+        :param file_name - name of file to resize
+        :param w - desired width
+        :param h - desired height
+        :param kb - desired file size in kb
+        """
+        # print(file_name)
+        image = Image.open(file_name)
+        # print(image)
+        kb = kb * 1024
+        o_w, o_h = image.size
+        # image_size = image.shape
+        # print(f"image_size: {img_size}")
+        # o_w = img_size[0]
+        # o_h = img_size[1]
+        if o_w > o_h:
+            resize_percent = w / o_w
+        else:
+            resize_percent = h / o_h
+        n_w = w * resize_percent
+        n_h = h * resize_percent
+        image.resize((n_w, n_h))
+
+        quality_num = 100
+        image.save("resized.jpg", optimize=True, quality=quality_num)
+        # get file size
+        try:
+            file_size = os.path.getsize("resized.jpg")
+        except Exception as ex:
+            print("Couldn't get file size")
+            print(ex)
+        print(f"testing kb {file_size}")
+        # print(type(file_size))
+        # print(type(kb))
+        while os.path.getsize("resized.jpg") > kb:
+            quality_num -= 1
+            print(quality_num)
+            image.save("resized.jpg", optimize=True, quality=quality_num)
+            # file_size = os.path.getsize("resized.jpg")
+            if quality_num <= 0:
+                print("COULDN'T RESIZE TO DESTINATION")
+                exit(0)
+        print("End testing kb")
+        # Now that the image is resized it needs to be saved to the same file
+        # that is going to be uploaded
+
+        os.remove(file_name)
+        os.rename("resized.jpg", file_name)
+
+        return quality_num
+
 def main():
     piCam = webcam()
     print(piCam.file_date_string())
     # print(piCam.cam_config()['filename'])
     # print(piCam.ftpserver)
     # print(piCam.cam_time())
-    piCam.create_embed_text()
+    # piCam.create_embed_text()
+    piCam.layer_text_img()
     return
 
 if __name__ == "__main__":
