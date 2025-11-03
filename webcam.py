@@ -165,7 +165,7 @@ class webcam:
         """
         font_dir = '/'.join(self.output_dir.split('/')[:-1])
         if len(self.embed_time) > 2:
-            self.camera_name = self.camera_name + ' - ' + self.cam_time
+            self.camera_name = self.camera_name + ' - ' + self.cam_time()
 
         # sample text and font
         unicode_text = self.camera_name
