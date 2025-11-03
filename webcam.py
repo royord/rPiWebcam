@@ -3,6 +3,8 @@ import time
 import configparser
 from configparser import ConfigParser
 from PIL import Image, ImageDraw, ImageFont
+from PIL.ImageFont import FreeTypeFont
+
 
 class webcam:
     def __init__(self):
