@@ -187,11 +187,12 @@ class webcam:
         draw.text((5,5), self.camera_name, self.font_color, self.font)
 
         # save the blank canvas to a file
+        output_dir = f"{self.output_dir}/text.{self.output_ext}"
         try:
-            os.remove(f"{self.output_dir}/text.{self.output_ext}")
+            os.remove(output_dir)
         except Exception as ex:
             pass
-        canvas.save(f"{self.output_dir}/text.{self.output_ext}")
+        canvas.save(output_dir)
 
         return True
 
