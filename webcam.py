@@ -17,8 +17,7 @@ class webcam:
 
         self.output_dir = os.path.join(os.getcwd(), 'image_dir')
         self.script_dir = os.path.join(os.getcwd())
-        self.testing = False
-        if not self.testing:
+        # if not self.testing:
 
         self._load_config()
         return
