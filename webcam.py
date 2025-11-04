@@ -249,7 +249,7 @@ class webcam:
         :param kb - desired file size in kb
         """
         # print(file_name)
-        image = Image.open(file_name)
+        image = Image.open(self.output_file)
         # print(image)
         kb = kb * 1024
         o_w, o_h = image.size
