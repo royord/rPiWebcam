@@ -335,7 +335,7 @@ class webcam:
     def update_rtc_time(self):
         """
         Update the time from the internet and then set the hardware
-        clock.
+        clock. Note that this can't be checked until on a linux system.
         """
         loop_time_set = 10
         is_set = False
