@@ -205,8 +205,8 @@ class webcam:
         have to derive that on it's own.
 
         :param output_dir - output location of the created file
-        :param cam_file - filename for the output file
-        :param cam_ext - Extension used for the output files
+        :param filename - filename for the output file
+        :param output_ext - Extension used for the output files
 
         :output image file
         """
