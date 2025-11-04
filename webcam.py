@@ -221,7 +221,7 @@ class webcam:
                 background = Image.open(f'{self.output_dir}/camera_image.{self.output_ext}')
             img = Image.open(f'{self.output_dir}/text.{self.output_ext}')
             # output_file = f'{self.output_dir}/{filename}{file_date_code}.{output_ext}'
-            output_file = f'{self.output_dir}/{self.filename}{self.file_date_string()}.{self.output_ext}'
+            self.output_file = f'{self.output_dir}/{self.filename}{self.file_date_string()}.{self.output_ext}'
             offset = (0, 0)
             background.paste(img, offset)
             # print(f"Saving {output_file}...")
