@@ -227,17 +227,18 @@ class webcam:
             # print(f"Saving {output_file}...")
             background.save(output_file)
             # print(f"Resizing {output_file}")
-            try:
-                image_file_size(output_file, cam_x, cam_y, image_file_sizea)
-            except Exception as ex:
-                print ("Error create_image.image_file_size")
-                print(ex)
+            # try:
+            #     self.image_file_size()
+            #     # pass
+            # except Exception as ex:
+            #     print ("Error create_image.image_file_size")
+            #     print(ex)
         except Exception as ex:
             print("Error create_image")
             print(ex)
         return output_file
 
-    def image_file_size(file_name, w, h, kb):
+    def image_file_size(self):
         """
         This function is used to ensure consistent file size output if needed by the application.
 
