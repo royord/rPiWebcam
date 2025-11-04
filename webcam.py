@@ -258,9 +258,9 @@ class webcam:
         # o_w = img_size[0]
         # o_h = img_size[1]
         if o_w > o_h:
-            resize_percent = w / o_w
+            resize_percent = self.width / o_w
         else:
-            resize_percent = h / o_h
+            resize_percent = self.height / o_h
         n_w = w * resize_percent
         n_h = h * resize_percent
         image.resize((n_w, n_h))
