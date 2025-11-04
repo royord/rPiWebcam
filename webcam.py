@@ -5,12 +5,21 @@ from configparser import ConfigParser
 from PIL import Image, ImageDraw, ImageFont
 import netifaces as ni
 import requests
+import getrpimodel as grpm
 
 from PIL.ImageFont import FreeTypeFont
 
 
 class webcam:
     def __init__(self):
+        # Get the raspberry pi model if there's an error we need to make sure that
+        # some of the code below isn't run
+        try:
+            self.m = grpm.model()
+        except Exception as ex:
+            print(ex)
+            self.m = None
+
         # Conditional import, if error we're in testing
         try:
             from picamera import PiCamera
