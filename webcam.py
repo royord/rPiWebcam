@@ -3,6 +3,9 @@ import time
 import configparser
 from configparser import ConfigParser
 from PIL import Image, ImageDraw, ImageFont
+import netifaces as ni
+import requests
+
 from PIL.ImageFont import FreeTypeFont
 
 
