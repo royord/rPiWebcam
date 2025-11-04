@@ -288,8 +288,8 @@ class webcam:
         # Now that the image is resized it needs to be saved to the same file
         # that is going to be uploaded
 
-        os.remove(file_name)
-        os.rename("resized.jpg", file_name)
+        os.remove(self.output_file)
+        os.rename("resized.jpg", self.output_file)
 
         return quality_num
 
