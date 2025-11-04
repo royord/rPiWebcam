@@ -383,7 +383,8 @@ def main():
     # print(piCam.ftpserver)
     # print(piCam.cam_time())
     # piCam.create_embed_text()
-    piCam.layer_text_img()
+    # piCam.layer_text_img()
+    piCam.class_test()
     return
 
 if __name__ == "__main__":
