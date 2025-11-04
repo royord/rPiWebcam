@@ -1,6 +1,8 @@
 import os
 import time
 from paramiko import SSHClient, AutoAddPolicy
+import scp
+import ftplib
 
 class FileTransfer:
     def __init__(self, ftpserver, ftpport, username, password, ftmode, file):
@@ -44,8 +46,8 @@ class FileTransfer:
         # and do so silently. The following command does so at the system level.
         # if self.ftpmode == 'sftp':
         #    os.system(f"ssh-keyscan -H {self.ftpserver} >> ~/.ssh/known_hosts")
-        file_size_bytes = os.path.getsize(file)
-        starttime = time.mktime(time.localtime())
+        self.file_size_bytes = os.path.getsize(file)
+        self.starttime = time.mktime(time.localtime())
 
         for x in ftp:
             if x.startswith("ftppath"):
@@ -88,15 +90,16 @@ class FileTransfer:
     def ftp_file(self):
         try:
             print("ftp")
-            ftp = ftplib.FTP(ftp_host, ftp_port)
-            ftp.login(ftp_user, ftp_pass)
+            ftp = ftplib.FTP(self.ftpserver, self.ftpport)
+            ftp.login(self.ftpuser, self.password)
             # upload(ftp, "README.nluug")
-            upload(ftp, file)
-            ext = os.path.splitext(file)[1]
+            # upload(ftp, self.file)
+            # ftp.storbinary()
+            ext = os.path.splitext(self.file)[1]
             if ext in (".txt", ".htm", ".html"):
-                ftp.storlines("STOR " + file, open(file))
+                ftp.storlines("STOR " + self.file, open(self.file))
             else:
-                ftp.storbinary("STOR " + file, open(file, "rb"), 1024)
+                ftp.storbinary("STOR " + self.file, open(self.file, "rb"), 1024)
         except Exception as ex:
             print("FTP Transfer Failure")
             return False
