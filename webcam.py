@@ -368,6 +368,14 @@ class webcam:
             loop_time_set -= 1
         return
 
+    def class_test(self):
+        self.file_date_string()
+        self.layer_text_img()
+        if not self.m == None:
+            self.update_rtc_time()
+            self.connection_check("eth0")
+        return
+
 def main():
     piCam = webcam()
     print(piCam.file_date_string())
