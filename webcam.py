@@ -293,7 +293,7 @@ class webcam:
 
         return quality_num
 
-    def update_time(self):
+    def update_rtc_time(self):
         """
         Update the time from the internet and then set the hardware
         clock.
