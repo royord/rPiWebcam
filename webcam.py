@@ -293,6 +293,33 @@ class webcam:
 
         return quality_num
 
+    def connection_check(self, interface):
+        """
+        Update needed
+        """
+        ni.gateways()
+        interfaces = ni.interfaces()
+
+        if interface in interfaces:
+            try:
+                ip = ni.ifaddresses(interface)[ni.AF_INET][0]['addr']
+                # ni.ifaddresses(interface)[ni.]
+                print(f'{interface} IP address: {ip}')
+                if len(ip) > 7:
+                    print(f"Using {interface} connection")
+
+                    requests.head('http://google.com', timeout=5)
+                    print("True connection to the internet is established")
+                    # true_connection = True
+                    return ip
+            except Exception as ex:
+                print(f"Connect_Exception: {interface}")
+                print(ex)
+
+            # Needs to ensure a real connection to the internet or continue
+            # to the next adapter.
+        return False
+
     def update_rtc_time(self):
         """
         Update the time from the internet and then set the hardware
