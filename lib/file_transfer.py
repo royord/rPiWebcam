@@ -10,21 +10,28 @@ class FileTransfer:
         self.ftpserver = ftpserver
 
         # Set the default port for SFTP or ftp if not set
-        if ftpport == "" and ftmode == "sftp":
-            self.ftpport = 22
-        elif ftpport == "" and ftmode == "ftp":
-            self.ftpport = 21
-        else:
-            self.ftpport = ftpport
         self.ftpmode = ftmode
         self.ftpport = ftpport
         self.username = username
         self.password = password
         self.ftmode = ftmode
         self.file = file
+        self.destination = destination
 
         self.file_size_bytes = os.path.getsize(file)
         self.starttime = time.mktime(time.localtime())
+        if ftpport == None and ftmode == "sftp":
+            self.ftpport = 22
+        elif ftpport == None and ftmode == "ftp":
+            self.ftpport = 21
+        else:
+            self.ftpport = ftpport
+
+        if ftmode == "sftp":
+            print("SFTP")
+            self.scp_file()
+        else:
+            self.ftp_file()
         pass
     
     def transfer(self, ftp, file):
@@ -95,7 +102,7 @@ class FileTransfer:
             ftp.login(self.ftpuser, self.password)
             # upload(ftp, "README.nluug")
             # upload(ftp, self.file)
-            # ftp.storbinary()
+            ftp.storbinary()
             ext = os.path.splitext(self.file)[1]
             if ext in (".txt", ".htm", ".html"):
                 ftp.storlines("STOR " + self.file, open(self.file))
@@ -106,7 +113,7 @@ class FileTransfer:
             return False
         return
 
-    def scp_file(self, site, port, user, pass_w, file, dest):
+    def scp_file(self):
         """
         Parameters:
             site    : Destination (ftp) site
@@ -124,17 +131,18 @@ class FileTransfer:
         """
         print("Starting SCP session...")
         print(
-            f"""site: {site}\n"""
-            f"""port: {port}\n"""
-            f"""user: {user}\n"""
-            f"""pass: {pass_w}\n"""
-            f"""dest: {dest}\n"""
+            f"""site: {self.ftpserver}\n"""
+            f"""port: {self.ftpport}\n"""
+            f"""user: {self.username}\n"""
+            f"""pass: {self.password}\n"""
+            f"""dest: {self.destination}\n"""
         )
         try:
             ssh_ob = SSHClient()
-            ssh_ob.load_system_host_keys()
+            # ssh_ob.load_system_host_keys()
             ssh_ob.set_missing_host_key_policy(AutoAddPolicy())
-            ssh_ob.connect(hostname=site, port=port, username=user, password=pass_w)
+            # ssh_ob.set_missing_host_key_policy(WarningPolicy())
+            ssh_ob.connect(hostname=self.ftpserver, port=self.ftpport, username=self.username, password=self.password)
             # ftp_client = ssh_ob.open_sftp()
             ftp_client = scp.SCPClient(ssh_ob.get_transport())
             # transfer_val = False
@@ -143,7 +151,7 @@ class FileTransfer:
             print(ex)
             return False
         try:
-            ftp_client.put(file, dest)
+            ftp_client.put(self.file, self.destination)
         except Exception as ex:
             print("Transfer unsuccessful.")
             print(ex)
