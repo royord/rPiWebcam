@@ -1,8 +1,11 @@
 import os
 import time
+
+import paramiko
 from paramiko import SSHClient, AutoAddPolicy
 import scp
 import ftplib
+import sys
 
 class FileTransfer:
     def __init__(self, ftpserver, username, password, ftmode, file, destination, ftpport=None):
@@ -144,18 +147,43 @@ class FileTransfer:
             # ssh_ob.set_missing_host_key_policy(WarningPolicy())
             ssh_ob.connect(hostname=self.ftpserver, port=self.ftpport, username=self.username, password=self.password)
             # ftp_client = ssh_ob.open_sftp()
-            ftp_client = scp.SCPClient(ssh_ob.get_transport())
+            # ftp_client = scp.SCPClient(ssh_ob.get_transport())
+            # ftp_client = ssh
+            ftp_client = paramiko.SFTPClient.from_transport(ssh_ob.get_transport())
             # transfer_val = False
         except Exception as ex:
             print("Couldn't connect to SCP site.")
             print(ex)
             return False
+        print(self.destination)
         try:
-            ftp_client.put(self.file, self.destination)
+            print(self.destination.split("/")[:-1])
+            for d in self.destination.split("/")[:-1]:
+                if d == "":
+                    d = '/'
+                try:
+                    ftp_client.chdir(d)
+                    print("Directory change: ", d)
+                except IOError:
+                    print("Creating directory: " + d)
+                    ftp_client.mkdir(d)
+                    ftp_client.chdir(d)
+            try:
+                ftp_client.put(self.file, self.destination.split("/")[-1])
+            except Exception as ex:
+                print("Transfer unsuccessful.")
+                print(ex)
+                return False
         except Exception as ex:
-            print("Transfer unsuccessful.")
+            print("Couldn't split destination.")
             print(ex)
             return False
+        # try:
+        #     ftp_client.put(self.file, self.destination)
+        # except Exception as ex:
+        #     print("Transfer unsuccessful.")
+        #     print(ex)
+        #     return False
         ftp_client.close()
 
         return True
