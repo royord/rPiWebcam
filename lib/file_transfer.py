@@ -5,7 +5,8 @@ import scp
 import ftplib
 
 class FileTransfer:
-    def __init__(self, ftpserver, ftpport, username, password, ftmode, file):
+    def __init__(self, ftpserver, username, password, ftmode, file, destination, ftpport=None):
+        print(file)
         self.ftpserver = ftpserver
 
         # Set the default port for SFTP or ftp if not set
