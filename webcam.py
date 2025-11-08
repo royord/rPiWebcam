@@ -391,6 +391,7 @@ class webcam:
 
     def class_test(self):
         self.file_date_string()
+        self.capture_image()
         self.create_embed_text()
         self.layer_text_img()
         if not self.m == None:
