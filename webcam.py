@@ -20,6 +20,7 @@ class webcam:
         except Exception as ex:
             print("Error getting raspberry pi model")
             print(ex)
+            print("End error getting raspberry pi model")
             self.m = None
 
         # Conditional import, if error we're in testing
