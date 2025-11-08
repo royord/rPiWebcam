@@ -146,6 +146,7 @@ class webcam:
         """
         if not self.testing:
             try:
+                print("Capturing image")
                 camera = PiCamera()
                 camera.framerate = 30
                 try:
@@ -167,6 +168,8 @@ class webcam:
                 print("Error in capture_image")
                 print(ex)
                 return False
+        else:
+            print("Testing mode, not capturing image")
         
     def create_embed_text(self):
         """
