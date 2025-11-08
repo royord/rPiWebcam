@@ -170,7 +170,7 @@ class webcam:
                 # print("base exposure found: ", str(baseExposure))
                 # camera.capture(f'{self.output_dir}/camera_image.{self.output_ext}')
                 camera.capture_file(f'{self.output_dir}/camera_image.{self.output_ext}')
-                print("Camera Revision:" + camera.revision)
+                # print("Camera Revision:" + camera.revision)
                 # camera.close()
                 camera.stop()
                 return True
