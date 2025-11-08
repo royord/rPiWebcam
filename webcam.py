@@ -153,21 +153,25 @@ class webcam:
             try:
                 print("Capturing image")
                 camera = Picamera2()
-                camera.framerate = 30
-                try:
-                    camera.resolution = (3280, 2464)
-                except:
-                    print("Review readme for change in memory split to full support Camera v2")
-                    print("Resolution kept at 2592x1944")
-                    camera.resolution = (2592, 1944)
-                camera.resolution = (cam_x, cam_y)
-                camera.start_preview()
+                # camera.framerate = 30
+                if 1=2:
+                    try:
+                        camera.resolution = (3280, 2464)
+                    except:
+                        print("Review readme for change in memory split to full support Camera v2")
+                        print("Resolution kept at 2592x1944")
+                        camera.resolution = (2592, 1944)
+                    camera.resolution = (cam_x, cam_y)
+                    camera.start_preview()
+                camera.start()
                 time.sleep(2)
                 baseExposure = camera.exposure_speed
                 print("base exposure found: ", str(baseExposure))
-                camera.capture(f'{self.output_dir}/camera_image.{self.output_ext}')
+                # camera.capture(f'{self.output_dir}/camera_image.{self.output_ext}')
+                camera.capture_image(f'{self.output_dir}/camera_image.{self.output_ext}')
                 print("Camera Revision:" + camera.revision)
-                camera.close()
+                # camera.close()
+                camera.stop()
                 return True
             except Exception as ex:
                 print("Error in capture_image")
