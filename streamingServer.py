@@ -110,7 +110,7 @@ def streaming():
     
     # 4 fps = 6 Mbps
     #24 fps = 18 Mbps
-    with picamera2.PiCamera2(resolution=res_set, framerate=6) as camera:
+    with picamera2.Picamera2(resolution=res_set, framerate=6) as camera:
         camera.rotation = 180
         output = StreamingOutput()
         try:
