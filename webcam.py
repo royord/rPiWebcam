@@ -25,7 +25,7 @@ class webcam:
 
         # Conditional import, if error we're in testing
         try:
-            from picamera import PiCamera
+            from picamera2 import PiCamera2
         except ImportError:
             print("Error importing picamera")
             self.testing = True
@@ -150,7 +150,7 @@ class webcam:
         if not self.testing:
             try:
                 print("Capturing image")
-                camera = PiCamera()
+                camera = PiCamera2()
                 camera.framerate = 30
                 try:
                     camera.resolution = (3280, 2464)
