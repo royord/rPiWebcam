@@ -164,6 +164,8 @@ class webcam:
                         camera.resolution = (2592, 1944)
                     camera.resolution = (cam_x, cam_y)
                     camera.start_preview()
+                config = camera.create_still_configuration(main={"size": (4608, 2592)})
+                camera.configure(config)
                 camera.start()
                 time.sleep(2)
                 # baseExposure = camera.exposure_speed
