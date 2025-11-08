@@ -15,6 +15,8 @@ class webcam:
     def __init__(self):
         # Get the raspberry pi model if there's an error we need to make sure that
         # some of the code below isn't run
+        self.testing = False
+
         try:
             self.m = grpm.model()
         except Exception as ex:
