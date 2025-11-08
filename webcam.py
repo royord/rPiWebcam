@@ -370,6 +370,7 @@ class webcam:
 
     def class_test(self):
         self.file_date_string()
+        self.create_embed_text()
         self.layer_text_img()
         if not self.m == None:
             self.update_rtc_time()
