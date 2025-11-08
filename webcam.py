@@ -152,6 +152,7 @@ class webcam:
         if not self.testing:
             try:
                 print("Capturing image")
+                from picamera2 import Picamera2
                 camera = Picamera2()
                 # camera.framerate = 30
                 if 1==2:
