@@ -27,6 +27,7 @@ class webcam:
         try:
             from picamera import PiCamera
         except ImportError:
+            print("Error importing picamera")
             self.testing = True
             pass
 
