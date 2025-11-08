@@ -102,7 +102,10 @@ def index():
 if __name__ == '__main__':
     # Start camera in thread
     cam_thread = Thread(target=start_camera)
-    cam_thread.start()
+    try:
+        cam_thread.start()
+    except RuntimeError as e:
+        print(e)
     sleep(2)  # Let camera initialize
 
     # Start Flask server
