@@ -166,8 +166,8 @@ class webcam:
                     camera.start_preview()
                 camera.start()
                 time.sleep(2)
-                baseExposure = camera.exposure_speed
-                print("base exposure found: ", str(baseExposure))
+                # baseExposure = camera.exposure_speed
+                # print("base exposure found: ", str(baseExposure))
                 # camera.capture(f'{self.output_dir}/camera_image.{self.output_ext}')
                 camera.capture_image(f'{self.output_dir}/camera_image.{self.output_ext}')
                 print("Camera Revision:" + camera.revision)
