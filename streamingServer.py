@@ -1,6 +1,6 @@
 # https://github.com/garyexplains/examples/blob/master/RPiCameraPython/mjpeg_cam.py
 import io
-import picamera
+import picamera2
 import logging
 import socketserver
 from threading import Condition
