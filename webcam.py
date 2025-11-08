@@ -418,7 +418,7 @@ class webcam:
 
 def main():
     piCam = webcam()
-    print(piCam.file_date_string())
+    # print(piCam.file_date_string())
     # print(piCam.cam_config()['filename'])
     # print(piCam.ftpserver)
     # print(piCam.cam_time())
