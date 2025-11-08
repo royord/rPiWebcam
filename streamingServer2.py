@@ -27,7 +27,8 @@ def start_camera():
     picam2.configure(config)
     picam2.framerate = 15  # Adjust for smoothness vs. CPU load
 
-    encoder = MJPEGEncoder(quality=85)  # JPG quality 1-100
+    # encoder = MJPEGEncoder(quality=85)  # JPG quality 1-100
+    encoder = MJPEGEncoder()  # JPG quality 1-100
     picam2.start_encoder(encoder, stream)
     picam2.start()
     print("MJPEG stream ready. Access at http://<pi-ip>:8000/")
