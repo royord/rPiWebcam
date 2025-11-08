@@ -231,20 +231,28 @@ class webcam:
                 background = Image.open(fallback_path)
             else:
                 background = Image.open(f'{self.output_dir}/camera_image.{self.output_ext}')
-            img = Image.open(f'{self.output_dir}/text.{self.output_ext}')
-            # output_file = f'{self.output_dir}/{filename}{file_date_code}.{output_ext}'
-            self.output_file = f'{self.output_dir}/{self.filename}{self.file_date_string()}.{self.output_ext}'
-            offset = (0, 0)
-            background.paste(img, offset)
-            # print(f"Saving {output_file}...")
-            background.save(output_file)
-            # print(f"Resizing {output_file}")
-            # try:
-            #     self.image_file_size()
-            #     # pass
-            # except Exception as ex:
-            #     print ("Error create_image.image_file_size")
-            #     print(ex)
+
+            try:
+                img = Image.open(f'{self.output_dir}/text.{self.output_ext}')
+            except Exception as ex:
+                print("Error creating img")
+
+            try:
+                # output_file = f'{self.output_dir}/{filename}{file_date_code}.{output_ext}'
+                self.output_file = f'{self.output_dir}/{self.filename}{self.file_date_string()}.{self.output_ext}'
+                offset = (0, 0)
+                background.paste(img, offset)
+                # print(f"Saving {output_file}...")
+                background.save(output_file)
+                # print(f"Resizing {output_file}")
+                # try:
+                #     self.image_file_size()
+                #     # pass
+                # except Exception as ex:
+                #     print ("Error create_image.image_file_size")
+                #     print(ex)
+            except Exception as ex:
+                print("Error layering text on the background")
         except Exception as ex:
             print("Error create_image")
             print(ex)
