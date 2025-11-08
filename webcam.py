@@ -235,7 +235,7 @@ class webcam:
             try:
                 img = Image.open(f'{self.output_dir}/text.{self.output_ext}')
             except Exception as ex:
-                print("Error creating img")
+                print(f"Error creating img: {img}")
 
             try:
                 # output_file = f'{self.output_dir}/{filename}{file_date_code}.{output_ext}'
