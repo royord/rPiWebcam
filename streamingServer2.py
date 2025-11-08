@@ -1,18 +1,18 @@
 from picamera2 import Picamera2
-from picamera2.encoders import MJPEGEncoder
-from picamera2.outputs import Output  # For custom Output subclass
+from picamera2.encoders import JpegEncoder  # Changed from MJPEGEncoder
+from picamera2.outputs import Output
 import io
 from flask import Flask, Response, render_template_string
 from threading import Thread
 from time import sleep
-import libcamera  # Optional: for transform if needed
+import libcamera  # Optional: for transform
 
 app = Flask(__name__)
 
 # Global camera instance
 picam2 = None
 encoder = None
-stream_buffer = None  # Renamed for clarity
+stream_buffer = None
 
 
 class MjpegOutput(Output):
@@ -40,7 +40,7 @@ def start_camera():
         main={"size": (1280, 720)},
         encode="main"
     )
-    # Optional: Add rotation (from earlier)
+    # Optional: Add rotation
     # config.transform = libcamera.Transform(hflip=1, vflip=1)
     picam2.configure(config)
     picam2.framerate = 15  # Adjust for smoothness vs. CPU load
@@ -49,10 +49,11 @@ def start_camera():
     stream_buffer = io.BytesIO()
     mjpeg_out = MjpegOutput(stream_buffer)
 
-    encoder = MJPEGEncoder(quality=85)  # JPG quality 1-100
-    picam2.start_encoder(encoder, mjpeg_out)  # Now passes Output!
+    # Use JpegEncoder with direct quality (1-100); no 'quality' kwarg needed later
+    encoder = JpegEncoder(q=85, num_threads=4)  # q=85 for your desired quality; threads for speed
+    picam2.start_encoder(encoder, mjpeg_out)  # No extra quality param
     picam2.start()
-    print("MJPEG stream ready. Access at http://<pi-ip>:8000/")
+    print("MJPEG stream ready (using JpegEncoder). Access at http://<pi-ip>:8000/")
 
 
 def generate_frames():
@@ -91,7 +92,7 @@ def index():
     <body>
         <h1>Live Raspberry Pi Camera Stream</h1>
         <img id="stream" src="/stream.mjpg" alt="Live Video Stream">
-        <p>Embedded MJPEG stream from Picamera2. Refresh page to restart if needed.</p>
+        <p>Embedded MJPEG stream from Picamera2 (JpegEncoder). Refresh if needed.</p>
     </body>
     </html>
     '''
