@@ -158,7 +158,7 @@ class webcam:
                 time.sleep(2)
                 baseExposure = camera.exposure_speed
                 print("base exposure found: ", str(baseExposure))
-                camera.capture(f'{self.output_dir}/camera_image.{output_ext}')
+                camera.capture(f'{self.output_dir}/camera_image.{self.output_ext}')
                 print("Camera Revision:" + camera.revision)
                 camera.close()
                 return True
