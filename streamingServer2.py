@@ -1,22 +1,38 @@
 from picamera2 import Picamera2
 from picamera2.encoders import MJPEGEncoder
+from picamera2.outputs import Output  # For custom Output subclass
 import io
 from flask import Flask, Response, render_template_string
 from threading import Thread
 from time import sleep
+import libcamera  # Optional: for transform if needed
 
 app = Flask(__name__)
 
 # Global camera instance
 picam2 = None
 encoder = None
+stream_buffer = None  # Renamed for clarity
 
-# Global stream buffer
-stream = io.BytesIO()
+
+class MjpegOutput(Output):
+    """Custom Output that writes MJPEG frames to a BytesIO buffer."""
+
+    def __init__(self, buffer):
+        super().__init__()
+        self.buffer = buffer
+
+    def output(self, request):
+        """Called when a frame is ready; appends JPG to buffer."""
+        if request.completed_requests:
+            # Get the encoded buffer (bytes) from the request
+            encoded_data = request.completed_requests[0].buffers()[0].planes()[0].readable().tobytes()
+            self.buffer.write(encoded_data)
+            self.buffer.seek(0)  # Reset for reading
 
 
 def start_camera():
-    global picam2, encoder
+    global picam2, encoder, stream_buffer
     picam2 = Picamera2()
 
     # Video config for streaming (720p example; adjust as needed)
@@ -24,24 +40,29 @@ def start_camera():
         main={"size": (1280, 720)},
         encode="main"
     )
+    # Optional: Add rotation (from earlier)
+    # config.transform = libcamera.Transform(hflip=1, vflip=1)
     picam2.configure(config)
     picam2.framerate = 15  # Adjust for smoothness vs. CPU load
 
-    # encoder = MJPEGEncoder(quality=85)  # JPG quality 1-100
-    encoder = MJPEGEncoder()  # JPG quality 1-100
-    picam2.start_encoder(encoder, stream)
+    # Create BytesIO buffer and custom output
+    stream_buffer = io.BytesIO()
+    mjpeg_out = MjpegOutput(stream_buffer)
+
+    encoder = MJPEGEncoder(quality=85)  # JPG quality 1-100
+    picam2.start_encoder(encoder, mjpeg_out)  # Now passes Output!
     picam2.start()
     print("MJPEG stream ready. Access at http://<pi-ip>:8000/")
 
 
 def generate_frames():
     while True:
-        if picam2 and picam2.started:
-            stream.seek(0)
-            stream.truncate(0)
-            picam2.wait_all_requests()  # Wait for frame
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + stream.getvalue() + b'\r\n')
+        if picam2 and picam2.started and stream_buffer:
+            stream_buffer.seek(0)
+            data = stream_buffer.read()  # Read current frame
+            if data:
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + data + b'\r\n')
         sleep(0.1)  # Frame rate control
 
 
@@ -53,7 +74,7 @@ def stream_mjpg():
 
 @app.route('/')
 def index():
-    # Simple HTML template with embedded stream (inline for no file needed)
+    # Simple HTML template with embedded stream
     html_template = '''
     <!DOCTYPE html>
     <html lang="en">
