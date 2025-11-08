@@ -6,6 +6,7 @@ from PIL import Image, ImageDraw, ImageFont
 import netifaces as ni
 import requests
 import getrpimodel as grpm
+from PIL.BlpImagePlugin import Format
 
 from PIL.ImageFont import FreeTypeFont
 
@@ -240,7 +241,7 @@ class webcam:
             try:
                 # output_file = f'{self.output_dir}/{filename}{file_date_code}.{output_ext}'
                 print(self.output_ext)
-                self.output_file = f'{self.output_dir}\\{self.filename}{self.file_date_string()}.{self.output_ext}'
+                self.output_file = f'{self.output_dir}/{self.filename}{self.file_date_string()}.{self.output_ext}'
                 # self.output_file = f'{self.output_dir}\\{self.filename}{self.file_date_string()}.png'
                 print(self.output_file)
                 offset = (0, 0)
