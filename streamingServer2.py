@@ -43,7 +43,7 @@ def start_camera():
     # Optional: Add rotation
     # config.transform = libcamera.Transform(hflip=1, vflip=1)
     picam2.configure(config)
-    picam2.framerate = 15  # Adjust for smoothness vs. CPU load
+    picam2.framerate = 10  # Adjust for smoothness vs. CPU load
 
     # Create BytesIO buffer and custom output
     stream_buffer = io.BytesIO()
