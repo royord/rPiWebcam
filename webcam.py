@@ -134,7 +134,7 @@ class webcam:
     #     # # print(ret)
     #     # return ret
     
-    def capture_image(self, output_dir, output_ext):
+    def capture_image(self):
         """
         This method captures the image using the raspberry pi camera module
 
