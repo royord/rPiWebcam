@@ -253,6 +253,7 @@ class webcam:
                 #     print(ex)
             except Exception as ex:
                 print("Error layering text on the background")
+                print(ex)
         except Exception as ex:
             print("Error create_image")
             print(ex)
