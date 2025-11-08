@@ -18,6 +18,7 @@ class webcam:
         try:
             self.m = grpm.model()
         except Exception as ex:
+            print("Error getting raspberry pi model")
             print(ex)
             self.m = None
 
