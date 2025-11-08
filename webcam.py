@@ -154,7 +154,7 @@ class webcam:
                 print("Capturing image")
                 camera = Picamera2()
                 # camera.framerate = 30
-                if 1=2:
+                if 1==2:
                     try:
                         camera.resolution = (3280, 2464)
                     except:
