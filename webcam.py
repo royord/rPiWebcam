@@ -239,11 +239,14 @@ class webcam:
 
             try:
                 # output_file = f'{self.output_dir}/{filename}{file_date_code}.{output_ext}'
-                self.output_file = f'{self.output_dir}/{self.filename}{self.file_date_string()}.{self.output_ext}'
+                print(self.output_ext)
+                self.output_file = f'{self.output_dir}\\{self.filename}{self.file_date_string()}.{self.output_ext}'
+                # self.output_file = f'{self.output_dir}\\{self.filename}{self.file_date_string()}.png'
+                print(self.output_file)
                 offset = (0, 0)
                 background.paste(img, offset)
                 # print(f"Saving {output_file}...")
-                background.save(output_file)
+                background.save(self.output_file,format='JPEG')
                 # print(f"Resizing {output_file}")
                 # try:
                 #     self.image_file_size()
