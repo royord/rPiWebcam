@@ -1,6 +1,8 @@
 # https://github.com/garyexplains/examples/blob/master/RPiCameraPython/mjpeg_cam.py
 import io
 import picamera2
+from picamera2.encoders import MJPEGEncoder
+import libcamera
 import logging
 import socketserver
 from threading import Condition
@@ -110,11 +112,24 @@ def streaming():
     
     # 4 fps = 6 Mbps
     #24 fps = 18 Mbps
-    with picamera2.Picamera2(resolution=res_set, framerate=6) as camera:
-        camera.rotation = 180
-        output = StreamingOutput()
+    with picamera2.Picamera2() as camera:
+        config = camera.create_video_configuration(
+            # 4056x3040
+            main={"size": (4056, 3040)},  # HD resolution (adjust to supported)
+            lores={"size": (640, 480)},  # Optional low-res for faster preview
+            encode="lores"  # Stream preview from lores for smoothness
+        )
+
+        camera.configure(config)
+        camera.framerate = 24
+
+        # camera.rotation = 180
+        # output = StreamingOutput()
         try:
-            camera.start_recording(output, format='mjpeg')
+            # camera.start_recording(output, format='mjpeg')
+            encoder = MJPEGEncoder(quality=85)  # JPG quality 1-100
+            camera.start_encoder(encoder, stream)  # Stream to global buffer
+            camera.start()
         except Exception as ex:
             print(f"Error capturing camera:\n {ex}")
         try:
