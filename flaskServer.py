@@ -22,6 +22,7 @@ from picamera2.encoders import JpegEncoder
 from picamera2.outputs import FileOutput
 from libcamera import Transform  # Requires python3-libcamera; install if missing
 
+os.environ["LIBCAMERA_LOG_LEVELS"] = "3"
 CONFIG_FILE = 'config.ini'  # File to save/load rotation (INI format)
 
 
@@ -91,10 +92,10 @@ PAGE = f"""\
 </head>
 <body>
 <h1>Picamera2 MJPEG Streaming Demo (Rotated {ROTATION}°)</h1>
-<img src="/stream.mjpg" width="{WIDTH}" height="{HEIGHT}" />
+<img src="/stream.mjpg" width="{WIDTH/8}" height="{HEIGHT/8}" />
 <p><a href="/full.html">Go to Fullscreen View</a> | <a href="/config.html">Configure Rotation</a></p>
 <button id="captureBtn">Capture Photo</button>
-<img id="photo" style="display: none; width: {WIDTH}px; height: {HEIGHT}px; margin-top: 10px;" />
+<img id="photo" style="display: none; width: {WIDTH/8}px; height: {HEIGHT/8}px; margin-top: 10px;" />
 <script>
 document.getElementById('captureBtn').onclick = function() {{
     const photoImg = document.getElementById('photo');
@@ -137,7 +138,7 @@ function toggleFullscreen() {{
 </html>
 """
 
-CONFIG_PAGE = """\
+CONFIG_PAGE = f"""\
 <html>
 <head>
 <title>Configure Rotation</title>
@@ -147,10 +148,10 @@ CONFIG_PAGE = """\
 <form method="POST" action="/save_config">
     <label for="rotation">Rotation (degrees):</label>
     <select id="rotation" name="rotation">
-        <option value="0" """ + ('selected' if ROTATION == 0 else '') + """>0</option>
-        <option value="90" """ + ('selected' if ROTATION == 90 else '') + """>90</option>
-        <option value="180" """ + ('selected' if ROTATION == 180 else '') + """>180</option>
-        <option value="270" """ + ('selected' if ROTATION == 270 else '') + """>270</option>
+        <option value="0" " + ('selected' if {ROTATION} == 0 else '') + ">0</option>
+        <option value="90" " + ('selected' if {ROTATION} == 90 else '') + ">90</option>
+        <option value="180" " + ('selected' if {ROTATION} == 180 else '') + ">180</option>
+        <option value="270" " + ('selected' if {ROTATION} == 270 else '') + ">270</option>
     </select>
     <br><br>
     <button type="submit">Save Configuration</button>
