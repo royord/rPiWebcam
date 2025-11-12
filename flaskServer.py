@@ -230,9 +230,6 @@ CONFIG_PAGE = f"""\
             <td colspan=2><input type="submit" value="Save Configuration"></td>       
         </tr>
     </table>
-    <br>
-    <br><br>
-    <button type="submit">Save Configuration</button>
 </form>
 <p><a href="/">Back to Stream</a></p>
 <script>
