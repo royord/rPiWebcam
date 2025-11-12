@@ -32,6 +32,8 @@ def load_config():
         config.read(CONFIG_FILE)
         if config.has_section('camera') and config.has_option('camera', 'rotation'):
             return config.getint('camera', 'rotation', fallback=270)
+    else:
+        raise FileNotFoundError(f"Config file '{CONFIG_FILE}' not found; using default rotation 270")
     return 270
 
 
