@@ -7,6 +7,7 @@
 # Capture photo button on index page; fetches /capture.jpg and displays below stream.
 # Routes: / (redirect to /index.html), /index.html (HTML page with capture button), /full.html (fullscreen stream page), /stream.mjpg (multipart stream), /capture.jpg (single JPEG capture), /config.html (config form), /save_config (POST to save rotation).
 # Supports rotation via libcamera Transform.
+# Fix: Simplified get_max_video_size() to handle SensorMode dict structure; removed format description access to avoid AttributeError (format is str, not dict with 'description').
 
 import io
 import logging
@@ -48,23 +49,13 @@ ROTATION = load_config()
 
 
 def get_max_video_size(picam2):
-    """Dynamically find the largest sensor mode suitable for video (prefers YUV/NV12 formats)."""
+    """Dynamically find the largest sensor mode size (suitable for video)."""
     max_size = (0, 0)
     for mode in picam2.sensor_modes:
         size = mode['size']
-        format_desc = mode.get('format', {}).get('description', '')
-        # Prioritize video-friendly formats (YUV420, NV12, etc.); fallback to largest overall
-        if 'YUV' in format_desc or 'NV12' in format_desc or 'XBGR' in format_desc:
-            area = size[0] * size[1]
-            if area > max_size[0] * max_size[1]:
-                max_size = size
-    if max_size == (0, 0):
-        # Fallback to largest mode if no video-specific found
-        for mode in picamera2.sensor_modes:
-            size = mode['size']
-            area = size[0] * size[1]
-            if area > max_size[0] * max_size[1]:
-                max_size = size
+        area = size[0] * size[1]
+        if area > max_size[0] * max_size[1]:
+            max_size = size
     return max_size
 
 
@@ -228,10 +219,10 @@ def gen_frames():
         with output.condition:
             output.condition.wait()
             frame = output.frame
+        content_length = b'Content-Length: ' + str(len(frame)).encode('utf-8') + b'\r\n\r\n'
         yield (b'--FRAME\r\n'
                b'Content-Type: image/jpeg\r\n'
-               # f'Content-Length: {len(frame)}\r\n\r\n'.encode('utf-8')
-               b'Content-Length: ' + str(len(frame)).encode('utf-8') + b'\r\n\r\n'
+               + content_length
                + frame + b'\r\n')
 
 
