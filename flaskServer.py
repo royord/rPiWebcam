@@ -230,7 +230,8 @@ def gen_frames():
             frame = output.frame
         yield (b'--FRAME\r\n'
                b'Content-Type: image/jpeg\r\n'
-               f'Content-Length: {len(frame)}\r\n\r\n'.encode('utf-8')
+               # f'Content-Length: {len(frame)}\r\n\r\n'.encode('utf-8')
+               b'Content-Length: ' + str(len(frame)).encode('utf-8') + b'\r\n\r\n'
                + frame + b'\r\n')
 
 
