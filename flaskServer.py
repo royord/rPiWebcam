@@ -148,7 +148,7 @@ CONFIG_PAGE = f"""\
 
 <form method="POST" action="/save_config">
     <table>
-        <tr><td colspan=2>Transfer Configuration</td></tr>
+        <tr><td colspan=2><h2>Transfer Configuration<h2></td></tr>
         <tr>
             <td>ftp-username:</td>
             <td><input type="text" name="ftp-username" value="username"></td>
