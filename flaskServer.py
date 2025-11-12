@@ -146,12 +146,12 @@ CONFIG_PAGE = f"""\
 <body>
 <h1>Camera Configuration</h1>
 <form method="POST" action="/save_config">
-    <label for="ISP Config">ISP Config</label>
+    <t2><label for="Transfer Configuration">Transfer Configuration</label><t2><br>
     ftp-username: <input type="text" name="ftp-username" value="username"><br>
     ftp-password: <input type="text" name="ftp-password" value="password"><br>
     ftp-destinatin: <input type="text" name="ftp-destination" value="ftp_destination_list"><br>
     <br>
-    <label for="Camera Config">Camera Config</label>
+    <t2><label for="Camera Config">Camera Config</label><t2><br>
     camera_name: <input type="text" name="camera_name" value="camera_name"><br>
     <label for="rotation">Rotation (degrees):</label>
     <select id="rotation" name="rotation">
@@ -159,7 +159,7 @@ CONFIG_PAGE = f"""\
         <option value="90" " + ('selected' if {ROTATION} == 90 else '') + ">90</option>
         <option value="180" " + ('selected' if {ROTATION} == 180 else '') + ">180</option>
         <option value="270" " + ('selected' if {ROTATION} == 270 else '') + ">270</option>
-    </select>
+    </select><br>
     time_before_image: <input type="text" name="time_before_image" value="time_before_image"><br>
     output_width: <input type="text" name="output_width" value="width"><br>
     output_height: <input type="text" name="output_height" value="height"><br>
