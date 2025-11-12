@@ -200,7 +200,8 @@ def full():
 
 @app.route('/config.html')
 def config():
-    return render_template_string(CONFIG_PAGE)
+    return ("HI")
+    # return render_template_string(CONFIG_PAGE)
 
 
 @app.route('/save_config', methods=['POST'])
