@@ -167,26 +167,70 @@ CONFIG_PAGE = f"""\
             <td>camera_name:</td>
             <td><input type="text" name="camera_name" value="camera_name"></td>
         </tr>
+        <tr>
+            <td>Rotation (degrees):</td>
+            <td>
+                <select id="rotation" name="rotation">
+                    <option value="0" " + ('selected' if {ROTATION} == 0 else '') + ">0</option>
+                    <option value="90" " + ('selected' if {ROTATION} == 90 else '') + ">90</option>
+                    <option value="180" " + ('selected' if {ROTATION} == 180 else '') + ">180</option>
+                    <option value="270" " + ('selected' if {ROTATION} == 270 else '') + ">270</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td>time_before_image:</td>
+            <td><input type="text" name="time_before_image" value="time_before_image"></td>
+        </tr>
+        <tr>
+            <td>output_width:</td>
+            <td><input type="text" name="output_width" value="width"></td>
+        </tr>
+        <tr>
+            <td>output_height:</td>
+            <td><input type="text" name="output_height" value="height"></td>
+        </tr>
+        <tr>
+            <td>output_extension:</td>
+            <td><input type="text" name="output_extension" value="extension"></td>
+        </tr>
+        <tr>
+            <td>embed_timestamp:</td>
+            <td><input type="text" name="embed_timestamp" value="embed_timestamp"></td>
+        </tr>
+        <tr>
+            <td>file_name:</td>
+            <td><input type="text" name="file_name" value="file_name"></td>
+        </tr>
+        <tr>
+            <td>text_color:</td>
+            <td><input type="text" name="text_color" value="text_color"></td>
+        </tr>
+        <tr>
+            <td>text_background:</td>
+            <td><input type="text" name="text_background" value="text_background"></td>
+        </tr>
+        </tr>
+            <td>camera_timezone:</td>
+            <td><input type="text" name="camera_timezone" value="camera_timezone"></td>
+        </tr>
+        <tr>
+            <td>camera_daylight_savings:</td>
+            <td><input type="text" name="camera_daylight_savings" value="camera_daylight_savings"></td>
+        </tr>
+        <tr>
+            <td>camera_port:</td>
+            <td><input type="text" name="camera_port" value="camera_port"></td>
+        </tr>
+        <tr>
+            <td>camera_url:</td>
+            <td><input type="text" name="camera_url" value="camera_url"></td>       
+        </tr>
+        <tr>
+            <td colspan=2><input type="submit" value="Save Configuration"></td>       
+        </tr>
     </table>
-    <label for="rotation">Rotation (degrees):</label>
-    <select id="rotation" name="rotation">
-        <option value="0" " + ('selected' if {ROTATION} == 0 else '') + ">0</option>
-        <option value="90" " + ('selected' if {ROTATION} == 90 else '') + ">90</option>
-        <option value="180" " + ('selected' if {ROTATION} == 180 else '') + ">180</option>
-        <option value="270" " + ('selected' if {ROTATION} == 270 else '') + ">270</option>
-    </select><br>
-    time_before_image: <input type="text" name="time_before_image" value="time_before_image"><br>
-    output_width: <input type="text" name="output_width" value="width"><br>
-    output_height: <input type="text" name="output_height" value="height"><br>
-    output_extension: <input type="text" name="output_extension" value="extension"><br>
-    embed_timestamp: <input type="text" name="embed_timestamp" value="embed_timestamp"><br>
-    file_name: <input type="text" name="file_name" value="file_name"><br>
-    text_color: <input type="text" name="text_color" value="text_color"><br>
-    text_background: <input type="text" name="text_background" value="text_background"><br>
-    camera_timezone: <input type="text" name="camera_timezone" value="camera_timezone"><br>
-    camera_daylight_savings: <input type="text" name="camera_daylight_savings" value="camera_daylight_savings"><br>
-    camera_port: <input type="text" name="camera_port" value="camera_port"><br>
-    camera_url: <input type="text" name="camera_url" value="camera_url"><br>
+    <br>
     <br><br>
     <button type="submit">Save Configuration</button>
 </form>
