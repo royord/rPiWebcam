@@ -145,14 +145,29 @@ CONFIG_PAGE = f"""\
 </head>
 <body>
 <h1>Camera Configuration</h1>
+
 <form method="POST" action="/save_config">
-    <t2><label for="Transfer Configuration">Transfer Configuration</label><t2><br>
-    ftp-username: <input type="text" name="ftp-username" value="username"><br>
-    ftp-password: <input type="text" name="ftp-password" value="password"><br>
-    ftp-destinatin: <input type="text" name="ftp-destination" value="ftp_destination_list"><br>
-    <br>
-    <t2><label for="Camera Config">Camera Config</label><t2><br>
-    camera_name: <input type="text" name="camera_name" value="camera_name"><br>
+    <table>
+        <tr><td colspan=2>Transfer Configuration</td></tr>
+        <tr>
+            <td>ftp-username:</td>
+            <td><input type="text" name="ftp-username" value="username"></td>
+        </tr>
+        <tr>
+            <td>ftp-password:</td>
+            <td><input type="password" name="ftp-password" value="password"></td>
+        </tr>
+        <tr>
+            <td>ftp-destination:</td>
+            <td><input type="text" name="ftp-destination" value="ftp_destination_list"></td>
+        </tr>
+        <tr></tr>
+        <tr><td colspan=2>Camera Config</td></tr>
+        <tr>
+            <td>camera_name:</td>
+            <td><input type="text" name="camera_name" value="camera_name"></td>
+        </tr>
+    </table>
     <label for="rotation">Rotation (degrees):</label>
     <select id="rotation" name="rotation">
         <option value="0" " + ('selected' if {ROTATION} == 0 else '') + ">0</option>
