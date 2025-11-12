@@ -144,8 +144,14 @@ CONFIG_PAGE = f"""\
 <title>Configure Rotation</title>
 </head>
 <body>
-<h1>Set Camera Rotation</h1>
+<h1>Camera Configuration</h1>
 <form method="POST" action="/save_config">
+    <label for="ISP Config">ISP Config</label>
+    ftp-username: <input type="text" name="ftp-username" value="username"><br>
+    ftp-password: <input type="text" name="ftp-password" value="password"><br>
+    ftp-destinatin: <input type="text" name="ftp-destination" value="ftp_destination_list"><br>
+    <label for="Camera Config">Camera Config</label>
+    time_berfore_image (secods): <br>
     <label for="rotation">Rotation (degrees):</label>
     <select id="rotation" name="rotation">
         <option value="0" " + ('selected' if {ROTATION} == 0 else '') + ">0</option>
