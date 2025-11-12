@@ -150,8 +150,9 @@ CONFIG_PAGE = f"""\
     ftp-username: <input type="text" name="ftp-username" value="username"><br>
     ftp-password: <input type="text" name="ftp-password" value="password"><br>
     ftp-destinatin: <input type="text" name="ftp-destination" value="ftp_destination_list"><br>
+    <br>
     <label for="Camera Config">Camera Config</label>
-    time_berfore_image (secods): <br>
+    camera_name: <input type="text" name="camera_name" value="camera_name"><br>
     <label for="rotation">Rotation (degrees):</label>
     <select id="rotation" name="rotation">
         <option value="0" " + ('selected' if {ROTATION} == 0 else '') + ">0</option>
@@ -159,6 +160,18 @@ CONFIG_PAGE = f"""\
         <option value="180" " + ('selected' if {ROTATION} == 180 else '') + ">180</option>
         <option value="270" " + ('selected' if {ROTATION} == 270 else '') + ">270</option>
     </select>
+    time_before_image: <input type="text" name="time_before_image" value="time_before_image"><br>
+    output_width: <input type="text" name="output_width" value="width"><br>
+    output_height: <input type="text" name="output_height" value="height"><br>
+    output_extension: <input type="text" name="output_extension" value="extension"><br>
+    embed_timestamp: <input type="text" name="embed_timestamp" value="embed_timestamp"><br>
+    file_name: <input type="text" name="file_name" value="file_name"><br>
+    text_color: <input type="text" name="text_color" value="text_color"><br>
+    text_background: <input type="text" name="text_background" value="text_background"><br>
+    camera_timezone: <input type="text" name="camera_timezone" value="camera_timezone"><br>
+    camera_daylight_savings: <input type="text" name="camera_daylight_savings" value="camera_daylight_savings"><br>
+    camera_port: <input type="text" name="camera_port" value="camera_port"><br>
+    camera_url: <input type="text" name="camera_url" value="camera_url"><br>
     <br><br>
     <button type="submit">Save Configuration</button>
 </form>
