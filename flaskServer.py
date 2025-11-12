@@ -161,8 +161,8 @@ CONFIG_PAGE = f"""\
             <td>ftp-destination:</td>
             <td><input type="text" name="ftp-destination" value="ftp_destination_list"></td>
         </tr>
-        <tr></tr>
-        <tr><td colspan=2>Camera Config</td></tr>
+        <tr><br></tr>
+        <tr><td colspan=2><h2>Camera Config<h2></td></tr>
         <tr>
             <td>camera_name:</td>
             <td><input type="text" name="camera_name" value="camera_name"></td>
