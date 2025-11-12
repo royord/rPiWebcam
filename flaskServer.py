@@ -145,7 +145,7 @@ CONFIG_PAGE = f"""\
 </head>
 <body>
 <h1>Camera Configuration</h1>
-
+<p>The following form allows you to configure the camera rotation. Click "Save Configuration" to save the new rotation to the config file.</p>
 <form method="POST" action="/save_config">
     <table>
         <tr><td colspan=2><h2>Transfer Configuration<h2></td></tr>
