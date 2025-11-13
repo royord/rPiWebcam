@@ -46,10 +46,8 @@ def save_config(rotation):
         config.write(f)
     return True
 
-
 # Load rotation from config
 ROTATION = load_config()
-
 
 def get_max_video_size(picam2):
     """Dynamically find the largest sensor mode size (suitable for video)."""
@@ -60,7 +58,6 @@ def get_max_video_size(picam2):
         if area > max_size[0] * max_size[1]:
             max_size = size
     return max_size
-
 
 # Initialize camera early to query modes
 picam2_temp = Picamera2()
@@ -285,6 +282,9 @@ def config():
 @app.route('/save_config', methods=['POST'])
 def save_config_route():
     rotation = int(request.form['rotation'])
+    config_key_value = request.form
+    print(config_key_value)
+    exit(0)
     if rotation in (0, 90, 180, 270):
         save_config(rotation)
         return redirect('/config.html?saved=1')
