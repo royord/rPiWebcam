@@ -42,7 +42,7 @@ def save_config(rotation):
     """Save rotation to config file."""
     # config = configparser.ConfigParser()
     # config['camera'] = {'rotation': str(rotation)}
-    for key, value in :
+    for key, value in rotation.items():
         config[key] = value
     with open(CONFIG_FILE, 'w') as f:
         config.write(f)
