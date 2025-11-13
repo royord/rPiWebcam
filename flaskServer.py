@@ -23,7 +23,7 @@ from picamera2.outputs import FileOutput
 from libcamera import Transform  # Requires python3-libcamera; install if missing
 
 os.environ["LIBCAMERA_LOG_LEVELS"] = "3"
-CONFIG_FILE = 'config.ini'  # File to save/load rotation (INI format)
+CONFIG_FILE = 'cam_config.cfg'  # File to save/load rotation (INI format)
 
 
 def load_config():
@@ -40,8 +40,10 @@ def load_config():
 
 def save_config(rotation):
     """Save rotation to config file."""
-    config = configparser.ConfigParser()
-    config['camera'] = {'rotation': str(rotation)}
+    # config = configparser.ConfigParser()
+    # config['camera'] = {'rotation': str(rotation)}
+    for key, value in :
+        config[key] = value
     with open(CONFIG_FILE, 'w') as f:
         config.write(f)
     return True
@@ -283,15 +285,21 @@ def config():
 def save_config_route():
     rotation = int(request.form['rotation'])
     config_key_value = request.form
-    print(config_key_value)
-    for key, value in config_key_value.items():
-        print(key, value)
-    exit(0)
-    if rotation in (0, 90, 180, 270):
-        save_config(rotation)
+    try:
+        save_config(config_key_value)
         return redirect('/config.html?saved=1')
-    else:
+    except Exception as e:
         return "Invalid rotation", 400
+    # print(config_key_value)
+    # for key, value in config_key_value.items():
+    #     print(key, value)
+    # exit(0)
+    # if rotation in (0, 90, 180, 270):
+    #     save_config(rotation)
+    #     return redirect('/config.html?saved=1')
+    # else:
+    #     return "Invalid rotation", 400
+    return config_key_value
 
 
 def gen_frames():
