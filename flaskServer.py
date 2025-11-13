@@ -39,11 +39,13 @@ def load_config():
 
 def save_config(rotation):
     """Save rotation to config file."""
-    # config = configparser.ConfigParser()
+    config = configparser.ConfigParser()
+    configs = {}
     # config['camera'] = {'rotation': str(rotation)}
     for key, value in rotation.items():
         print(key, value)
-        config[key] = value
+        configs[key] = value
+    config['camera'] = configs
     with open(CONFIG_FILE, 'w') as f:
         config.write(f)
     return True
