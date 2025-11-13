@@ -284,6 +284,8 @@ def save_config_route():
     rotation = int(request.form['rotation'])
     config_key_value = request.form
     print(config_key_value)
+    for key, value in config_key_value.items():
+        print(key, value)
     exit(0)
     if rotation in (0, 90, 180, 270):
         save_config(rotation)
