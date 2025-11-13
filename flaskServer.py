@@ -37,12 +37,12 @@ def load_config():
         raise FileNotFoundError(f"Config file '{CONFIG_FILE}' not found; using default rotation 270")
     return 270
 
-
 def save_config(rotation):
     """Save rotation to config file."""
     # config = configparser.ConfigParser()
     # config['camera'] = {'rotation': str(rotation)}
     for key, value in rotation.items():
+        print(key, value)
         config[key] = value
     with open(CONFIG_FILE, 'w') as f:
         config.write(f)
