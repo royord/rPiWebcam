@@ -339,8 +339,8 @@ def capture_photo():
     # request = picam2.capture_request()
     # request.save(photo_buffer)
     # request.release()
-
-    picam2.capture_file(photo_buffer, name="main", format="jpeg", encoder=JpegEncoder(q=95))
+    # picam2.capture_file(photo_buffer, name="main", format="jpeg", encoder=JpegEncoder(q=95))
+    picam2.capture_file(photo_buffer, name="main", format="jpeg")
 
     photo_buffer.seek(0)
     print("""capture_photo completed""")
