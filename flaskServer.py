@@ -326,7 +326,6 @@ def stream():
                              'Cache-Control': 'no-cache, private',
                              'Pragma': 'no-cache'})
 
-
 @app.route('/capture.jpg')
 def capture_photo():
     """Capture a single high-quality JPEG still from the camera."""
