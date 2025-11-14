@@ -330,9 +330,11 @@ def stream():
 @app.route('/capture.jpg')
 def capture_photo():
     """Capture a single high-quality JPEG still from the camera."""
+    print("""Capture a single high-quality JPEG still from the camera.""")
     photo_buffer = BytesIO()
     picam2.capture_file(photo_buffer, encoder=JpegEncoder(q=95))  # Higher quality for stills
     photo_buffer.seek(0)
+    print("""capture_photo completed""")
     return Response(photo_buffer.getvalue(), mimetype='image/jpeg')
 
 
