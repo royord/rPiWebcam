@@ -336,6 +336,14 @@ def capture_photo():
     photo_buffer.seek(0)
     return Response(photo_buffer.getvalue(), mimetype='image/jpeg')
 
+@app.route('/capture_emedded.jpg')
+def capture_png():
+    """Capture a single PNG still from the camera."""
+    print("""Capture a single PNG still from the camera.""")
+    photo_buffer = BytesIO()
+    picam2.capture_file(photo_buffer, name="main", format="jpeg")
+    photo_buffer.seek(0)
+    return Response(photo_buffer.getvalue(), mimetype='image/jpeg')
 
 if __name__ == '__main__':
     # Configure camera with detected max size
