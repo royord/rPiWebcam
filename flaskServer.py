@@ -334,7 +334,11 @@ def capture_photo():
     photo_buffer = BytesIO()
     # picam2.capture_file(photo_buffer, encoder=JpegEncoder(q=95))  # Higher quality for stills
     # picam2.capture_file(photo_buffer, encoder=JpegEncoder(q=95))  # Higher quality for stills
-    picam2.capture_file(photo_buffer, 'jpeg')
+    # picam2.capture_file(photo_buffer, 'jpeg')
+
+    request = picam2.capture_request()
+    request.save(photo_buffer)
+    request.release()
 
     photo_buffer.seek(0)
     print("""capture_photo completed""")
