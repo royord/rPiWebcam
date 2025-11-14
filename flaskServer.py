@@ -335,7 +335,7 @@ def capture_photo():
     photo_buffer.seek(0)
     return Response(photo_buffer.getvalue(), mimetype='image/jpeg')
 
-@app.route('/capture_emedded.jpg')
+@app.route('/capture_embedded.jpg')
 def capture_png():
     """Capture a single PNG still from the camera."""
     print("""Capture a single PNG still from the camera.""")
