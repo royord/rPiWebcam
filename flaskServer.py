@@ -37,7 +37,8 @@ def load_config():
         if config.has_section('camera') and config.has_option('camera', 'rotation'):
             for key, value in config.items('camera'):
                 configs[key] = config.get('camera', key)
-    globals().update(configs)
+    # globals().update(configs)
+    locals().update(configs)
                 # setattr(config, key, value)
     #         return config.getint('camera', 'rotation', fallback=270)
     # else:
@@ -60,7 +61,7 @@ def save_config(rotation):
 # Load rotation from config
 # ROTATION = load_config()
 load_config()
-print("Rotation: ", ROTATION)
+print("Rotation: ", rotation)
 
 def get_max_video_size(picam2):
     """Dynamically find the largest sensor mode size (suitable for video)."""
