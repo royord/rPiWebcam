@@ -389,11 +389,12 @@ def create_embed_text():
     Enhance with the path that the file should be saved to so that images aren't in the
     root folder.
     """
-    if len(embed_timestamp) > 2:
-        camera_name = globals().camera_name + ' - ' + cam_time()
+    script_dir = os.path.dirname(__file__)
+    if len(globals().embed_timestamp) > 2:
+        camera_name2 = globals().camera_name + ' - ' + cam_time()
 
     # sample text and font
-    unicode_text = camera_name
+    unicode_text = camera_name2
     # font_path = f'{self.script_dir}/fonts/AmazeFont.otf'
     font_path = f'{script_dir}/fonts/AmazeFont.otf'
 
