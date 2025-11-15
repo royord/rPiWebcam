@@ -390,7 +390,7 @@ def create_embed_text():
     root folder.
     """
     if len(embed_timestamp) > 2:
-        camera_name = camera_name + ' - ' + cam_time()
+        camera_name = globals().camera_name + ' - ' + cam_time()
 
     # sample text and font
     unicode_text = camera_name
