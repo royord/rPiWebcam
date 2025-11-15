@@ -342,7 +342,50 @@ def capture_png():
     photo_buffer = BytesIO()
     picam2.capture_file(photo_buffer, name="main", format="jpeg")
     photo_buffer.seek(0)
+
+
     return Response(photo_buffer.getvalue(), mimetype='image/jpeg')
+
+def create_embed_text(self):
+    """
+    This method is going to create the text that is going to be put onto the
+    photo ONLY. When the text is created it will then be embedded into the image.
+
+    Enhance with the path that the file should be saved to so that images aren't in the
+    root folder.
+    """
+    font_dir = '/'.join(self.output_dir.split('/')[:-1])
+    if len(self.embed_time) > 2:
+        self.camera_name = self.camera_name + ' - ' + self.cam_time()
+
+    # sample text and font
+    unicode_text = self.camera_name
+    # font_path = f'{self.script_dir}/fonts/AmazeFont.otf'
+    font_path = f'{self.script_dir}/fonts/AmazeFont.otf'
+    if self.testing == True:
+        print(font_path)
+
+    font = ImageFont.truetype(font=font_path, size=18)
+    left, top, right, bottom = font.getbbox(text=unicode_text, mode='string')
+    text_width = right - left
+    text_height = bottom - top
+
+    # create a blank canvas with extra space between lines
+    canvas = Image.new('RGB', (text_width + 10, text_height + 10), self.text_bg)
+
+    # draw the text onto the text canvas, and use black as the text color
+    draw = ImageDraw.Draw(canvas)
+    draw.text((5,5), self.camera_name, self.text_color, font)
+
+    # save the blank canvas to a file
+    output_dir = f"{self.output_dir}/text.{self.output_ext}"
+    try:
+        os.remove(output_dir)
+    except Exception as ex:
+        pass
+    canvas.save(output_dir)
+
+    return True
 
 if __name__ == '__main__':
     # Configure camera with detected max size
