@@ -29,13 +29,14 @@ CONFIG_FILE = 'cam_config.cfg'  # File to save/load rotation (INI format)
 
 def load_config():
     """Load rotation from config file; default to 270."""
-    config = configparser.ConfigParser()
     configs = {}
+
+    config = configparser.ConfigParser()
     if os.path.exists(CONFIG_FILE):
         config.read(CONFIG_FILE)
         if config.has_section('camera') and config.has_option('camera', 'rotation'):
-            for key, value in config['camera'].items():
-                configs[key] = value
+            for key, value in config.items('camera'):
+                configs[key] = config.get('camera', key)
     globals().update(configs)
                 # setattr(config, key, value)
     #         return config.getint('camera', 'rotation', fallback=270)
@@ -59,7 +60,7 @@ def save_config(rotation):
 # Load rotation from config
 # ROTATION = load_config()
 load_config()
-ROTATION = rotation
+print("Rotation: ", ROTATION)
 
 def get_max_video_size(picam2):
     """Dynamically find the largest sensor mode size (suitable for video)."""
