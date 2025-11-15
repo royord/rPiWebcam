@@ -405,7 +405,7 @@ def create_embed_text():
     text_height = bottom - top
 
     # create a blank canvas with extra space between lines
-    canvas = Image.new('RGB', (text_width + 10, text_height + 10), self.text_bg)
+    canvas = Image.new('RGB', (text_width + 10, text_height + 10), globals()['text_background'])
 
     # draw the text onto the text canvas, and use black as the text color
     draw = ImageDraw.Draw(canvas)
