@@ -39,7 +39,7 @@ def load_config():
                 configs[key] = config.get('camera', key)
     # globals().update(configs)
     print(configs)
-    locals().update(configs)
+    globals().update(configs)
                 # setattr(config, key, value)
     #         return config.getint('camera', 'rotation', fallback=270)
     # else:
