@@ -17,6 +17,7 @@ from threading import Condition
 from flask import Flask, Response, redirect, request, render_template_string
 from io import BytesIO
 
+from PIL import Image, ImageDraw, ImageFont
 from picamera2 import Picamera2
 from picamera2.encoders import JpegEncoder
 from picamera2.outputs import FileOutput
@@ -342,6 +343,7 @@ def capture_embedded_photo():
     photo_buffer = BytesIO()
     picam2.capture_file(photo_buffer, name="main", format="jpeg")
     photo_buffer.seek(0)
+
     return Response(photo_buffer.getvalue(), mimetype='image/jpeg')
 
 def create_embed_text(self):
