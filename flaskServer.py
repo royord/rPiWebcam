@@ -340,7 +340,7 @@ def capture_embedded_photo():
     """Capture a single high-quality JPEG still from the camera, with embedded text."""
     print("""Capture a single high-quality JPEG still from the camera, with embedded text.""")
     photo = capture_photo()
-    return Response(photo.response, mimetype='image/jpeg')
+    return photo
 
 def create_embed_text(self):
     """
