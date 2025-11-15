@@ -13,6 +13,7 @@ import io
 import logging
 import configparser
 import os
+import time
 from threading import Condition
 from flask import Flask, Response, redirect, request, render_template_string
 from io import BytesIO
@@ -45,6 +46,20 @@ def load_config():
     # else:
     #     raise FileNotFoundError(f"Config file '{CONFIG_FILE}' not found; using default rotation 270")
     # return 270
+
+def current_time(self):
+    current_time = time.localtime()
+    return current_time
+
+def cam_time(self):
+    """
+    Time in the following format:
+    Sat, 15 Nov 2020 10:43:50
+
+    :return:
+    """
+    cam_time = time.strftime('%a, %d %b %Y %H:%M:%S', self.current_time())
+    return cam_time
 
 def save_config(rotation):
     """Save rotation to config file."""
@@ -374,13 +389,13 @@ def create_embed_text(self):
     Enhance with the path that the file should be saved to so that images aren't in the
     root folder.
     """
-    if len(self.embed_time) > 2:
-        self.camera_name = self.camera_name + ' - ' + self.cam_time()
+    if len(embed_timestamp) > 2:
+        camera_name = camera_name + ' - ' + cam_time()
 
     # sample text and font
-    unicode_text = self.camera_name
+    unicode_text = camera_name
     # font_path = f'{self.script_dir}/fonts/AmazeFont.otf'
-    font_path = f'{self.script_dir}/fonts/AmazeFont.otf'
+    font_path = f'{script_dir}/fonts/AmazeFont.otf'
 
     font = ImageFont.truetype(font=font_path, size=18)
     left, top, right, bottom = font.getbbox(text=unicode_text, mode='string')
@@ -392,10 +407,10 @@ def create_embed_text(self):
 
     # draw the text onto the text canvas, and use black as the text color
     draw = ImageDraw.Draw(canvas)
-    draw.text((5,5), self.camera_name, self.text_color, font)
+    draw.text((5,5), camera_name, text_color, font)
 
     # save the blank canvas to a file
-    output_dir = f"{self.output_dir}/text.{self.output_ext}"
+    output_dir = f"{output_dir}/text.{output_ext}"
     # try:
     #     os.remove(output_dir)
     # except Exception as ex:
