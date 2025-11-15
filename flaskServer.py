@@ -47,18 +47,18 @@ def load_config():
     #     raise FileNotFoundError(f"Config file '{CONFIG_FILE}' not found; using default rotation 270")
     # return 270
 
-def current_time(self):
+def current_time():
     current_time = time.localtime()
     return current_time
 
-def cam_time(self):
+def cam_time():
     """
     Time in the following format:
     Sat, 15 Nov 2020 10:43:50
 
     :return:
     """
-    cam_time = time.strftime('%a, %d %b %Y %H:%M:%S', self.current_time())
+    cam_time = time.strftime('%a, %d %b %Y %H:%M:%S', current_time())
     return cam_time
 
 def save_config(rotation):
