@@ -337,14 +337,22 @@ def capture_photo():
     return Response(photo_buffer.getvalue(), mimetype='image/jpeg')
 
 @app.route('/capture_embedded.jpg')
-def capture_embedded_photo():
+def capture_embedded_photo(self):
     """Capture a single high-quality JPEG still from the camera, with embedded text."""
     print("""Capture a single high-quality JPEG still from the camera, with embedded text.""")
     photo_buffer = BytesIO()
     picam2.capture_file(photo_buffer, name="main", format="jpeg")
     photo_buffer.seek(0)
 
-    return Response(photo_buffer.getvalue(), mimetype='image/jpeg')
+    background = Image.open(photo_buffer)
+    img_text = self.create_embed_text()
+    background.paste(img_text, (0, 0))
+
+    output_buffer = BytesIO()
+    background.save(output_buffer, format="jpeg")
+    output_buffer.seek(0)
+
+    return Response(output_buffer.getvalue(), mimetype='image/jpeg')
 
 def create_embed_text(self):
     """
@@ -379,13 +387,13 @@ def create_embed_text(self):
 
     # save the blank canvas to a file
     output_dir = f"{self.output_dir}/text.{self.output_ext}"
-    try:
-        os.remove(output_dir)
-    except Exception as ex:
-        pass
-    canvas.save(output_dir)
+    # try:
+    #     os.remove(output_dir)
+    # except Exception as ex:
+    #     pass
+    # canvas.save(output_dir)
 
-    return True
+    return canvas
 
 if __name__ == '__main__':
     # Configure camera with detected max size
