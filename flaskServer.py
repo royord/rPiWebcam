@@ -30,13 +30,18 @@ CONFIG_FILE = 'cam_config.cfg'  # File to save/load rotation (INI format)
 def load_config():
     """Load rotation from config file; default to 270."""
     config = configparser.ConfigParser()
+    configs = {}
     if os.path.exists(CONFIG_FILE):
         config.read(CONFIG_FILE)
         if config.has_section('camera') and config.has_option('camera', 'rotation'):
-            return config.getint('camera', 'rotation', fallback=270)
-    else:
-        raise FileNotFoundError(f"Config file '{CONFIG_FILE}' not found; using default rotation 270")
-    return 270
+            for key, value in config['camera'].items():
+                configs[key] = value
+    globals().update(configs)
+                # setattr(config, key, value)
+    #         return config.getint('camera', 'rotation', fallback=270)
+    # else:
+    #     raise FileNotFoundError(f"Config file '{CONFIG_FILE}' not found; using default rotation 270")
+    # return 270
 
 def save_config(rotation):
     """Save rotation to config file."""
@@ -52,7 +57,9 @@ def save_config(rotation):
     return True
 
 # Load rotation from config
-ROTATION = load_config()
+# ROTATION = load_config()
+load_config()
+ROTATION = rotation
 
 def get_max_video_size(picam2):
     """Dynamically find the largest sensor mode size (suitable for video)."""
@@ -362,7 +369,6 @@ def create_embed_text(self):
     Enhance with the path that the file should be saved to so that images aren't in the
     root folder.
     """
-    font_dir = '/'.join(self.output_dir.split('/')[:-1])
     if len(self.embed_time) > 2:
         self.camera_name = self.camera_name + ' - ' + self.cam_time()
 
@@ -370,8 +376,6 @@ def create_embed_text(self):
     unicode_text = self.camera_name
     # font_path = f'{self.script_dir}/fonts/AmazeFont.otf'
     font_path = f'{self.script_dir}/fonts/AmazeFont.otf'
-    if self.testing == True:
-        print(font_path)
 
     font = ImageFont.truetype(font=font_path, size=18)
     left, top, right, bottom = font.getbbox(text=unicode_text, mode='string')
