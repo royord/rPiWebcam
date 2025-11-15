@@ -337,7 +337,7 @@ def capture_photo():
     return Response(photo_buffer.getvalue(), mimetype='image/jpeg')
 
 @app.route('/capture_embedded.jpg')
-def capture_embedded_photo(self):
+def capture_embedded_photo():
     """Capture a single high-quality JPEG still from the camera, with embedded text."""
     print("""Capture a single high-quality JPEG still from the camera, with embedded text.""")
     photo_buffer = BytesIO()
@@ -345,7 +345,7 @@ def capture_embedded_photo(self):
     photo_buffer.seek(0)
 
     background = Image.open(photo_buffer)
-    img_text = self.create_embed_text()
+    img_text = create_embed_text()
     background.paste(img_text, (0, 0))
 
     output_buffer = BytesIO()
