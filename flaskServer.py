@@ -64,7 +64,7 @@ def save_config(rotation):
 load_config()
 # print(globals())
 # print("Rotation: ", ROTATION)
-ROTATION = rotation
+ROTATION = int(rotation)
 
 def get_max_video_size(picam2):
     """Dynamically find the largest sensor mode size (suitable for video)."""
