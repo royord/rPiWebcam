@@ -389,9 +389,10 @@ def create_embed_text():
     Enhance with the path that the file should be saved to so that images aren't in the
     root folder.
     """
+    camera_name = globals()['camera_name']
     script_dir = os.path.dirname(__file__)
-    if len(globals().embed_timestamp) > 2:
-        camera_name2 = globals().camera_name + ' - ' + cam_time()
+    if len(globals()['embed_timestamp']) > 2:
+        camera_name = globals()['camera_name'] + ' - ' + cam_time()
 
     # sample text and font
     unicode_text = camera_name2
@@ -408,10 +409,10 @@ def create_embed_text():
 
     # draw the text onto the text canvas, and use black as the text color
     draw = ImageDraw.Draw(canvas)
-    draw.text((5,5), camera_name, text_color, font)
+    draw.text((5,5), camera_name, globals()['text_color'], font)
 
     # save the blank canvas to a file
-    output_dir = f"{output_dir}/text.{output_ext}"
+    output_dir = f"{globals()['output_dir']}/text.{globals()['output_ext']}"
     # try:
     #     os.remove(output_dir)
     # except Exception as ex:
