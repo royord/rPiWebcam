@@ -381,7 +381,7 @@ def capture_embedded_photo():
 
     return Response(output_buffer.getvalue(), mimetype='image/jpeg')
 
-def create_embed_text(self):
+def create_embed_text():
     """
     This method is going to create the text that is going to be put onto the
     photo ONLY. When the text is created it will then be embedded into the image.
