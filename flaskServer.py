@@ -339,8 +339,10 @@ def capture_photo():
 def capture_embedded_photo():
     """Capture a single high-quality JPEG still from the camera, with embedded text."""
     print("""Capture a single high-quality JPEG still from the camera, with embedded text.""")
-    photo = capture_photo()
-    return photo
+    photo_buffer = BytesIO()
+    picam2.capture_file(photo_buffer, name="main", format="jpeg")
+    photo_buffer.seek(0)
+    return Response(photo_buffer.getvalue(), mimetype='image/jpeg')
 
 def create_embed_text(self):
     """
