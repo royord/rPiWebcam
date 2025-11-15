@@ -412,7 +412,7 @@ def create_embed_text():
     draw.text((5,5), camera_name, globals()['text_color'], font)
 
     # save the blank canvas to a file
-    output_dir = f"{globals()['output_dir']}/text.{globals()['output_ext']}"
+    # output_dir = f"{globals()['output_dir']}/text.{globals()['output_ext']}"
     # try:
     #     os.remove(output_dir)
     # except Exception as ex:
