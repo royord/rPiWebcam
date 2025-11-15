@@ -395,7 +395,7 @@ def create_embed_text():
         camera_name = globals()['camera_name'] + ' - ' + cam_time()
 
     # sample text and font
-    unicode_text = camera_name2
+    unicode_text = camera_name
     # font_path = f'{self.script_dir}/fonts/AmazeFont.otf'
     font_path = f'{script_dir}/fonts/AmazeFont.otf'
 
