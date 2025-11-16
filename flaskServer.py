@@ -472,6 +472,8 @@ def create_embed_text():
     try:
         font = ImageFont.truetype(font=font_path, size=int(globals()['text_size']))
     except Exception as ex:
+        print("Couldn't load font size: ", globals()['text_size'], " using default size: 18")
+        print(ex)
         font = ImageFont.truetype(font=font_path, size=18)
     left, top, right, bottom = font.getbbox(text=unicode_text, mode='string')
     text_width = right - left
