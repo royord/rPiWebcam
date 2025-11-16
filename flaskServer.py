@@ -75,7 +75,7 @@ def save_config(rotation):
     config['camera'] = configs
     with open(CONFIG_FILE, 'w') as f:
         config.write(f)
-    load_config()
+    # load_config()
     return True
 
 # Load rotation from config
