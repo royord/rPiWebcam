@@ -132,7 +132,7 @@ PAGE = f"""\
 <body>
 <h1>Picamera2 MJPEG Streaming Demo (Rotated {ROTATION}°)</h1>
 <img src="/stream.mjpg" width="{WIDTH/8}" height="{HEIGHT/8}" />
-<p><a href="/full.html">Go to Fullscreen View</a> | <a href="/config.html">Configure Rotation</a></p>
+<p><a href="/full.html">Go to Fullscreen View</a> | <a href="/config.html">Configure Settings</a></p>
 <button id="captureBtn">Capture Photo</button>
 <img id="photo" style="display: none; width: {WIDTH/8}px; height: {HEIGHT/8}px; margin-top: 10px;" />
 <script>
