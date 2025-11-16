@@ -312,7 +312,7 @@ def full():
 
 @app.route('/config.html')
 def config():
-    load_config()
+    # load_config()
     # return ("HI")
     return render_template_string(CONFIG_PAGE)
 
