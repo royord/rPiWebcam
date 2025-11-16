@@ -360,7 +360,7 @@ def save_config_route():
         save_config(config_key_value)
         return redirect('/config.html?saved=1')
     except Exception as e:
-        # print(e)
+        print(e)
         return "Invalid rotation", 400
     # print(config_key_value)
     # for key, value in config_key_value.items():
