@@ -468,7 +468,10 @@ def create_embed_text():
     # font_path = f'{self.script_dir}/fonts/AmazeFont.otf'
     font_path = f'{script_dir}/fonts/AmazeFont.otf'
 
-    font = ImageFont.truetype(font=font_path, size=18)
+    try:
+        font = ImageFont.truetype(font=font_path, size=globals()['text_size'])
+    except Exception as ex:
+        font = ImageFont.truetype(font=font_path, size=18)
     left, top, right, bottom = font.getbbox(text=unicode_text, mode='string')
     text_width = right - left
     text_height = bottom - top
