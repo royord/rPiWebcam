@@ -39,8 +39,8 @@ default_config = {
     'output_extension': 'extension',
     'embed_timestamp': 'embed_timestamp',
     'file_name': 'file_name',
-    'text_color': 'text_color',
-    'text_background': 'text_background',
+    'text_color': 'silver',
+    'text_background': 'black',
     'camera_timezone': 'camera_timezone',
     'camera_daylight_savings': 'camera_daylight_savings',
     'camera_port': '8000',
@@ -470,11 +470,17 @@ def create_embed_text():
     text_height = bottom - top
 
     # create a blank canvas with extra space between lines
-    canvas = Image.new('RGB', (text_width + 10, text_height + 10), globals()['text_background'])
+    try:
+        canvas = Image.new('RGB', (text_width + 10, text_height + 10), globals()['text_background'])
+    except Exception as ex:
+        canvas = Image.new('RGB', (text_width + 10, text_height + 10), 'black')
 
     # draw the text onto the text canvas, and use black as the text color
     draw = ImageDraw.Draw(canvas)
-    draw.text((5,5), camera_name, globals()['text_color'], font)
+    try:
+        draw.text((5,5), camera_name, globals()['text_color'], font)
+    except Exception as ex:
+        draw.text((5,5), camera_name, 'silver', font)
 
     # save the blank canvas to a file
     # output_dir = f"{globals()['output_dir']}/text.{globals()['output_ext']}"
