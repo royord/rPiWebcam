@@ -114,7 +114,7 @@ def save_config(rotation):
         print(e)
 
     print("trying to load config again:")
-    load_config()
+    # load_config()
     print("trying to load config again END")
 
     # print("--==GLOBALS==--")
