@@ -324,7 +324,7 @@ def generate_config_page():
 <p><a href="/">Back to Stream</a></p>
 <script>
 if (window.location.search.includes('saved=1')) {{
-    alert('Configuration saved! Restart the server to apply changes.');
+    alert('Configuration saved!');
 }}
 </script>
 </body>
