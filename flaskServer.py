@@ -227,7 +227,8 @@ function toggleFullscreen() {{
 </html>
 """
 
-CONFIG_PAGE = f"""\
+def generate_config_page():
+    return f"""\
 <html>
 <head>
 <title>Configure Rotation</title>
@@ -369,7 +370,7 @@ def full():
 def config():
     # load_config()
     # return ("HI")
-    return render_template_string(CONFIG_PAGE)
+    return render_template_string(generate_config_page())
 
 
 @app.route('/save_config', methods=['POST'])
