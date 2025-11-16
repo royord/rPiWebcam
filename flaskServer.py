@@ -73,7 +73,8 @@ def save_config(rotation):
         configs[key] = value
         print("Save config: ", key, " = ", value)
         globals()[key] = value
-    config['camera'] = configs
+    globals().update(configs)
+    # config['camera'] = configs
     with open(CONFIG_FILE, 'w') as f:
         config.write(f)
     # load_config()
