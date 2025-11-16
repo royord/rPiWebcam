@@ -89,16 +89,20 @@ def save_config(rotation):
     config = configparser.ConfigParser()
     configs = {}
     # config['camera'] = {'rotation': str(rotation)}
-    for key, value in rotation.items():
-        print(key, value)
-        configs[key] = value
-        config[key] = value
-        print("Save config: ", key, " = ", value)
-        globals()[key] = value
-    globals().update(configs)
-    # config['camera'] = configs
-    with open(CONFIG_FILE, 'w') as f:
-        config.write(f)
+    try:
+        for key, value in rotation.items():
+            print(key, value)
+            configs[key] = value
+            config[key] = value
+            print("Save config: ", key, " = ", value)
+            globals()[key] = value
+        globals().update(configs)
+        # config['camera'] = configs
+        with open(CONFIG_FILE, 'w') as f:
+            config.write(f)
+    except Exception as e:
+        print("Error saving config")
+        print(e)
     # load_config()
 
     # print("--==GLOBALS==--")
