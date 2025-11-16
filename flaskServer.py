@@ -68,8 +68,7 @@ def load_config():
         if key not in globals():
             globals()[key] = value
             configs[key] = value
-
-    save_config(configs)
+    # save_config(configs)
 
 def current_time():
     current_time = time.localtime()
