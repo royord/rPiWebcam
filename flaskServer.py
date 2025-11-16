@@ -77,6 +77,10 @@ def save_config(rotation):
     with open(CONFIG_FILE, 'w') as f:
         config.write(f)
     # load_config()
+
+    for key, value in globals().items():
+        print(key, '::', value)
+
     return True
 
 # Load rotation from config
