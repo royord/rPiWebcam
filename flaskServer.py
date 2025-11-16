@@ -39,6 +39,7 @@ default_config = {
     'output_extension': 'extension',
     'embed_timestamp': 'embed_timestamp',
     'file_name': 'file_name',
+    'text_size': '18',
     'text_color': 'silver',
     'text_background': 'black',
     'camera_timezone': 'camera_timezone',
