@@ -91,7 +91,12 @@ def save_config(rotation):
 load_config()
 # print(globals())
 # print("Rotation: ", ROTATION)
-ROTATION = int(globals()['rotation'])
+try:
+    ROTATION = int(globals()['rotation'])
+except Exception as e:
+    print(e)
+    ROTATION = 270
+
 print("Rotation: ", ROTATION)
 
 def get_max_video_size(picam2):
