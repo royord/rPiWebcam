@@ -88,6 +88,7 @@ def save_config(rotation):
     """Save rotation to config file."""
     config = configparser.ConfigParser()
     configs = {}
+    print("Save config: ", rotation)
     # config['camera'] = {'rotation': str(rotation)}
     try:
         for key, value in rotation.items():
