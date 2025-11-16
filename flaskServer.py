@@ -180,21 +180,21 @@ CONFIG_PAGE = f"""\
         <tr><td colspan=2><h2>Transfer Configuration<h2></td></tr>
         <tr>
             <td>ftp-username:</td>
-            <td><input type="text" name="ftp-username" value="{ftp-username}"></td>
+            <td><input type="text" name="ftp-username" value="{globals()['ftp-username']}"></td>
         </tr>
         <tr>
             <td>ftp-password:</td>
-            <td><input type="password" name="ftp-password" value="{ftp-password}"></td>
+            <td><input type="password" name="ftp-password" value="{globals()['ftp-password']}"></td>
         </tr>
         <tr>
             <td>ftp-destination:</td>
-            <td><input type="text" name="ftp-destination" value="{ftp-destination}"></td>
+            <td><input type="text" name="ftp-destination" value="{globals()['ftp-destination']}"></td>
         </tr>
         <tr><br></tr>
         <tr><td colspan=2><h2>Camera Config<h2></td></tr>
         <tr>
             <td>camera_name:</td>
-            <td><input type="text" name="camera_name" value="{camera_name}"></td>
+            <td><input type="text" name="camera_name" value="{globals()['camera_name']}"></td>
         </tr>
         <tr>
             <td>Rotation (degrees):</td>
@@ -209,51 +209,51 @@ CONFIG_PAGE = f"""\
         </tr>
         <tr>
             <td>time_before_image:</td>
-            <td><input type="text" name="time_before_image" value="{time_before_image}"></td>
+            <td><input type="text" name="time_before_image" value="{globals()['time_before_image']}"></td>
         </tr>
         <tr>
             <td>output_width:</td>
-            <td><input type="text" name="output_width" value="{output_width}"></td>
+            <td><input type="text" name="output_width" value="{globals()['output_width']}"></td>
         </tr>
         <tr>
             <td>output_height:</td>
-            <td><input type="text" name="output_height" value="{output_height}"></td>
+            <td><input type="text" name="output_height" value="{globals()['output_height']}"></td>
         </tr>
         <tr>
             <td>output_extension:</td>
-            <td><input type="text" name="output_extension" value="{output_extension}"></td>
+            <td><input type="text" name="output_extension" value="{globals()['output_extension']}"></td>
         </tr>
         <tr>
             <td>embed_timestamp:</td>
-            <td><input type="text" name="embed_timestamp" value="{embed_timestamp}"></td>
+            <td><input type="text" name="embed_timestamp" value="{globals()['embed_timestamp']}"></td>
         </tr>
         <tr>
             <td>file_name:</td>
-            <td><input type="text" name="file_name" value="{file_name}"></td>
+            <td><input type="text" name="file_name" value="{globals()['file_name']}"></td>
         </tr>
         <tr>
             <td>text_color:</td>
-            <td><input type="text" name="text_color" value="{text_color}"></td>
+            <td><input type="text" name="text_color" value="{globals()['text_color']}"></td>
         </tr>
         <tr>
             <td>text_background:</td>
-            <td><input type="text" name="text_background" value="{text_background}"></td>
+            <td><input type="text" name="text_background" value="{globals()['text_background']}"></td>
         </tr>
         </tr>
             <td>camera_timezone:</td>
-            <td><input type="text" name="camera_timezone" value="{camera_timezone}"></td>
+            <td><input type="text" name="camera_timezone" value="{globals()['camera_timezone']}"></td>
         </tr>
         <tr>
             <td>camera_daylight_savings:</td>
-            <td><input type="text" name="camera_daylight_savings" value="{camera_daylight_savings}"></td>
+            <td><input type="text" name="camera_daylight_savings" value="{globals()['camera_daylight_savings']}"></td>
         </tr>
         <tr>
             <td>camera_port:</td>
-            <td><input type="text" name="camera_port" value="{camera_port}"></td>
+            <td><input type="text" name="camera_port" value="{globals()['camera_port']}"></td>
         </tr>
         <tr>
             <td>camera_url:</td>
-            <td><input type="text" name="camera_url" value="{camera_url}"></td>       
+            <td><input type="text" name="camera_url" value="{globals()['camera_url']}"></td>       
         </tr>
         <tr>
             <td colspan=2><input type="submit" value="Save Configuration"></td>       
