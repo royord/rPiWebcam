@@ -353,13 +353,13 @@ def config():
 
 @app.route('/save_config', methods=['POST'])
 def save_config_route():
-    rotation = int(request.form['rotation'])
+    # rotation = int(request.form['rotation'])
     config_key_value = request.form
     try:
         save_config(config_key_value)
         return redirect('/config.html?saved=1')
     except Exception as e:
-        print(e)
+        # print(e)
         return "Invalid rotation", 400
     # print(config_key_value)
     # for key, value in config_key_value.items():
