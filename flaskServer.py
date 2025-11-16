@@ -296,6 +296,10 @@ def generate_config_page():
             <td><input type="text" name="file_name" value="{globals()['file_name']}"></td>
         </tr>
         <tr>
+            <td>text_size:</td>
+            <td><input type="text" name="text_size" value="{globals()['text_size']}"></td>
+        </tr>
+        <tr>
             <td>text_color:</td>
             <td><input type="text" name="text_color" value="{globals()['text_color']}"></td>
         </tr>
