@@ -112,7 +112,9 @@ def save_config(rotation):
     except Exception as e:
         print("Error saving config")
         print(e)
-    # load_config()
+
+    print("trying to load config again:")
+    load_config()
 
     # print("--==GLOBALS==--")
     # for key, value in globals().items():
