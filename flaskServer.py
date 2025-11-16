@@ -43,7 +43,7 @@ default_config = {
     'text_background': 'text_background',
     'camera_timezone': 'camera_timezone',
     'camera_daylight_savings': 'camera_daylight_savings',
-    'camera_port': 'camera_port',
+    'camera_port': '8000',
     'camera_url': 'camera_urls'
 }
 
