@@ -38,9 +38,9 @@ def load_config():
         if config.has_section('camera') and config.has_option('camera', 'rotation'):
             for key, value in config.items('camera'):
                 configs[key] = config.get('camera', key)
-                print("Updating config: ", key, " = ", value)
+                print("Current config: ", key, " = ", value)
     # globals().update(configs)
-    print(globals())
+    # print(globals())
     globals().update(configs)
                 # setattr(config, key, value)
     #         return config.getint('camera', 'rotation', fallback=270)
@@ -70,6 +70,7 @@ def save_config(rotation):
     for key, value in rotation.items():
         print(key, value)
         configs[key] = value
+        print("Save config: ", key, " = ", value)
     config['camera'] = configs
     with open(CONFIG_FILE, 'w') as f:
         config.write(f)
