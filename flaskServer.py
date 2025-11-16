@@ -191,6 +191,9 @@ document.getElementById('captureBtn').onclick = function() {{
     photoImg.src = '/capture.jpg?' + Date.now();
     photoImg.style.display = 'block';
 }};
+if (window.location.search.includes('saved=1')) {{
+    alert('Configuration saved!');
+}}
 </script>
 </body>
 </html>
