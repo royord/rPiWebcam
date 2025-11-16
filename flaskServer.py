@@ -104,7 +104,7 @@ def save_config(rotation):
             #     print("Error updating config:")
             #     print(e)
             print("Save config: ", key, " = ", value)
-            globals()[key] = value
+            # globals()[key] = value
         globals().update(configs)
         config['camera'] = configs # this will actually write the config out
         with open(CONFIG_FILE, 'w') as f:
