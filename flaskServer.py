@@ -93,8 +93,16 @@ def save_config(rotation):
     try:
         for key, value in rotation.items():
             print(key, value)
-            configs[key] = value
-            config[key] = value
+            try:
+                configs[key] = value
+            except Exception as e:
+                print("Error updating configs:")
+                print(e)
+            try:
+                config[key] = value
+            except Exception as e:
+                print("Error updating config:")
+                print(e)
             print("Save config: ", key, " = ", value)
             globals()[key] = value
         globals().update(configs)
