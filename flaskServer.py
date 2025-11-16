@@ -79,8 +79,10 @@ def save_config(rotation):
         config.write(f)
     # load_config()
 
+    print("--==GLOBALS==--")
     for key, value in globals().items():
         print(key, '::', value)
+    print("--==GLOBALS==--")
 
     return True
 
