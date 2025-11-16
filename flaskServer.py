@@ -27,6 +27,26 @@ from libcamera import Transform  # Requires python3-libcamera; install if missin
 os.environ["LIBCAMERA_LOG_LEVELS"] = "3"
 CONFIG_FILE = 'cam_config.cfg'  # File to save/load rotation (INI format)
 
+default_config = {
+    'ftp-username': 'username',
+    'ftp-password': 'password',
+    'ftp-destination': 'ftp_destination_list',
+    'camera_name': 'camera_name',
+    'rotation': '0',
+    'time_before_image': 'time_before_image',
+    'output_width': 'width',
+    'output_height': 'height',
+    'output_extension': 'extension',
+    'embed_timestamp': 'embed_timestamp',
+    'file_name': 'file_name',
+    'text_color': 'text_color',
+    'text_background': 'text_background',
+    'camera_timezone': 'camera_timezone',
+    'camera_daylight_savings': 'camera_daylight_savings',
+    'camera_port': 'camera_port',
+    'camera_url': 'camera_urls'
+}
+
 
 def load_config():
     """Load rotation from config file; default to 270."""
@@ -43,11 +63,13 @@ def load_config():
     # print(globals())
     globals().update(configs)
     print(globals())
-                # setattr(config, key, value)
-    #         return config.getint('camera', 'rotation', fallback=270)
-    # else:
-    #     raise FileNotFoundError(f"Config file '{CONFIG_FILE}' not found; using default rotation 270")
-    # return 270
+
+    for key, value in default_config.items():
+        if key not in globals():
+            globals()[key] = value
+            configs[key] = value
+
+    save_config(configs)
 
 def current_time():
     current_time = time.localtime()
