@@ -92,6 +92,7 @@ def save_config(rotation):
     for key, value in rotation.items():
         print(key, value)
         configs[key] = value
+        config[key] = value
         print("Save config: ", key, " = ", value)
         globals()[key] = value
     globals().update(configs)
@@ -100,10 +101,10 @@ def save_config(rotation):
         config.write(f)
     # load_config()
 
-    print("--==GLOBALS==--")
-    for key, value in globals().items():
-        print(key, '::', value)
-    print("--==GLOBALS==--")
+    # print("--==GLOBALS==--")
+    # for key, value in globals().items():
+    #     print(key, '::', value)
+    # print("--==GLOBALS==--")
 
     return True
 
