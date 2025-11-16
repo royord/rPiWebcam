@@ -38,6 +38,7 @@ def load_config():
         if config.has_section('camera') and config.has_option('camera', 'rotation'):
             for key, value in config.items('camera'):
                 configs[key] = config.get('camera', key)
+                print("Updating config: ", key, " = ", value)
     # globals().update(configs)
     # print(configs)
     globals().update(configs)
