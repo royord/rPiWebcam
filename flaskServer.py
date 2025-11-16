@@ -180,15 +180,15 @@ CONFIG_PAGE = f"""\
         <tr><td colspan=2><h2>Transfer Configuration<h2></td></tr>
         <tr>
             <td>ftp-username:</td>
-            <td><input type="text" name="ftp-username" value="{username}"></td>
+            <td><input type="text" name="ftp-username" value="{ftp-username}"></td>
         </tr>
         <tr>
             <td>ftp-password:</td>
-            <td><input type="password" name="ftp-password" value="{password}"></td>
+            <td><input type="password" name="ftp-password" value="{ftp-password}"></td>
         </tr>
         <tr>
             <td>ftp-destination:</td>
-            <td><input type="text" name="ftp-destination" value="{ftp_destination_list}"></td>
+            <td><input type="text" name="ftp-destination" value="{ftp-destination}"></td>
         </tr>
         <tr><br></tr>
         <tr><td colspan=2><h2>Camera Config<h2></td></tr>
