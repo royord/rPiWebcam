@@ -115,6 +115,7 @@ def save_config(rotation):
 
     print("trying to load config again:")
     load_config()
+    print("trying to load config again END")
 
     # print("--==GLOBALS==--")
     # for key, value in globals().items():
