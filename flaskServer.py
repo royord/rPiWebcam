@@ -98,15 +98,15 @@ def save_config(rotation):
             except Exception as e:
                 print("Error updating configs:")
                 print(e)
-            try:
-                config[key] = value
-            except Exception as e:
-                print("Error updating config:")
-                print(e)
+            # try:
+            #     config[key] = value
+            # except Exception as e:
+            #     print("Error updating config:")
+            #     print(e)
             print("Save config: ", key, " = ", value)
             globals()[key] = value
         globals().update(configs)
-        # config['camera'] = configs
+        config['camera'] = configs # this will actually write the config out
         with open(CONFIG_FILE, 'w') as f:
             config.write(f)
     except Exception as e:
