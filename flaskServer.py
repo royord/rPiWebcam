@@ -444,6 +444,10 @@ def capture_photo():
     photo_buffer.seek(0)
     return Response(photo_buffer.getvalue(), mimetype='image/jpeg')
 
+def file_date_string(self):
+    string = time.strftime('%Y%m%d_%H%M%S', self.current_time())
+    return string
+
 @app.route('/capture_embedded.jpg')
 def capture_embedded_photo():
     """Capture a single high-quality JPEG still from the camera, with embedded text."""
@@ -460,7 +464,8 @@ def capture_embedded_photo():
     background.save(output_buffer, format="jpeg", quality=100)
     output_buffer.seek(0)
 
-    background.save("embedded.jpg", format="jpeg")
+
+    background.save(f"{globals()['camera_name']}_{file_date_string()}.jpg", format="jpeg")
 
     return Response(output_buffer.getvalue(), mimetype='image/jpeg')
 
