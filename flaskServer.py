@@ -18,6 +18,7 @@ from threading import Condition
 from flask import Flask, Response, redirect, request, render_template_string
 from io import BytesIO
 import netifaces as ni
+import lib.file_transfer as ft
 
 from PIL import Image, ImageDraw, ImageFont
 from picamera2 import Picamera2
