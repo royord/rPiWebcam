@@ -458,6 +458,8 @@ def capture_embedded_photo():
     background.save(output_buffer, format="jpeg")
     output_buffer.seek(0)
 
+    background.save("embedded.jpg", format="jpeg")
+
     return Response(output_buffer.getvalue(), mimetype='image/jpeg')
 
 def create_embed_text():
