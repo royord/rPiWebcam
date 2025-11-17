@@ -494,6 +494,7 @@ def create_embed_text():
     try:
         canvas = Image.new('RGB', (text_width + 10, text_height + 10), globals()['text_background'])
     except Exception as ex:
+        # For if the background color isn't able to be loaded.'
         canvas = Image.new('RGB', (text_width + 10, text_height + 10), 'black')
 
     # draw the text onto the text canvas, and use black as the text color
@@ -501,6 +502,7 @@ def create_embed_text():
     try:
         draw.text((5,5), camera_name, globals()['text_color'], font)
     except Exception as ex:
+        # For if the font color isn't able to be loaded.
         draw.text((5,5), camera_name, 'silver', font)
 
     # save the blank canvas to a file
@@ -523,7 +525,8 @@ if __name__ == '__main__':
     picam2.configure(config)
 
     # Start recording to output
-    picam2.start_recording(JpegEncoder(q=85), FileOutput(output))
+    # picam2.start_recording(JpegEncoder(q=85), FileOutput(output))
+    picam2.start_recording(JpegEncoder(q=100), FileOutput(output))
 
     # logging.basicConfig(level=logging.DEBUG)
 
