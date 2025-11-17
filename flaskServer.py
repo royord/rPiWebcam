@@ -33,7 +33,7 @@ default_config = {
     'ftp-destination': 'ftp_destination_list',
     'camera_name': 'camera_name',
     'rotation': '0',
-    'time_before_image': 'time_before_image',
+    'time_before_image': '10',
     'output_width': 'width',
     'output_height': 'height',
     'output_extension': 'extension',
@@ -185,6 +185,8 @@ PAGE = f"""\
 <img src="/stream.mjpg" width="{WIDTH/8}" height="{HEIGHT/8}" />
 <p><a href="/full.html">Go to Fullscreen View</a> | <a href="/config.html">Configure Settings</a></p>
 <button id="captureBtn">Capture Photo</button>
+<button id="captureEmbeddedBtn">Capture Photo with Embedded Text</button>
+
 <img id="photo" style="display: none; width: {WIDTH/8}px; height: {HEIGHT/8}px; margin-top: 10px;" />
 <script>
 document.getElementById('captureBtn').onclick = function() {{
@@ -192,6 +194,13 @@ document.getElementById('captureBtn').onclick = function() {{
     photoImg.src = '/capture.jpg?' + Date.now();
     photoImg.style.display = 'block';
 }};
+
+document.getElementById('captureEmbeddedBtn').onclick = function() {{
+    const photoImg = document.getElementById('photo');
+    photoImg.src = '/capture_embedded.jpg?' + Date.now();
+    photoImg.style.display = 'block';
+}};
+
 if (window.location.search.includes('saved=1')) {{
     alert('Configuration saved!');
 }}
@@ -273,7 +282,7 @@ def generate_config_page():
             </td>
         </tr>
         <tr>
-            <td>time_before_image:</td>
+            <td>time_before_image (seconds):</td>
             <td><input type="text" name="time_before_image" value="{globals()['time_before_image']}"></td>
         </tr>
         <tr>
