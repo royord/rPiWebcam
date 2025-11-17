@@ -389,6 +389,54 @@ class StreamingOutput(io.BufferedIOBase):
             logging.debug(f"New frame written: {len(buf)} bytes")
             self.condition.notify_all()
 
+def update_rtc_time(self):
+    """
+    Update the time from the internet and then set the hardware
+    clock. Note that this can't be checked until on a linux system.
+    """
+    loop_time_set = 10
+    is_set = False
+    # Get the time off of the internet.
+    # os.system("sudo ntpdate time-a-g.nist.gov time-b-g.nist.gov time-c-g.nist.gov time-d-g.nist.gov time-d-g.nist.gov time-e-g.nist.gov time-e-g.nist.gov time-a-wwv.nist.gov time-b-wwv.nist.gov time-c-wwv.nist.gov time-d-wwv.nist.gov time-d-wwv.nist.gov time-e-wwv.nist.gov time-e-wwv.nist.gov time-a-b.nist.gov time-b-b.nist.gov time-c-b.nist.gov time-d-b.nist.gov time-d-b.nist.gov time-e-b.nist.gov time-e-b.nist.gov time.nist.gov utcnist.colorado.edu utcnist2.colorado.edu")
+    while loop_time_set > 0 and is_set == False:
+        try:
+            ## Raspberry Pi 5 method of setting time
+            ## Want to update the time every time the script is run
+            os.system("sudo timedatectl set-ntp False")
+            os.system("sudo timedatectl set-ntp True")
+            is_set = True
+        except:
+            print("couldn't update time from timedatectl command")
+        try:
+            if not is_set:
+                os.system("sudo systemctl restart systemd-timesyncd")
+                is_set = True
+        except:
+            print("couldn't update time from systemctl command")
+
+        try:
+            if not is_set:
+                os.system("sudo ntpdate -q 0.us.pool.ntp.org")
+                is_set = True
+        except Exception as ex:
+            print("couldn't find time")
+        # Set the hardware clock
+        try:
+            if not is_set:
+                os.system("sudo hwclock -w")
+                is_set = True
+        except Exception as ex:
+            print("couldn't hwclock -w")
+
+        try:
+            if not is_set:
+                os.system("sudo hwclock -s")
+                is_set = True
+        except Exception as ex:
+            print("couldn't hwclock -s")
+        time.sleep(5)
+        loop_time_set -= 1
+    return
 
 # Flask app setup
 app = Flask(__name__)
