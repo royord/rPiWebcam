@@ -37,6 +37,8 @@ default_config = {
     'output_width': 'width',
     'output_height': 'height',
     'output_extension': 'extension',
+    'output_quality':'100',
+    'output_filetype':'jpg',
     'embed_timestamp': 'embed_timestamp',
     'file_name': 'file_name',
     'text_size': '18',
@@ -455,7 +457,7 @@ def capture_embedded_photo():
     background.paste(img_text, (0, 0))
 
     output_buffer = BytesIO()
-    background.save(output_buffer, format="jpeg")
+    background.save(output_buffer, format="jpeg", quality=100)
     output_buffer.seek(0)
 
     background.save("embedded.jpg", format="jpeg")
