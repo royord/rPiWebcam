@@ -17,6 +17,7 @@ import time
 from threading import Condition
 from flask import Flask, Response, redirect, request, render_template_string
 from io import BytesIO
+import netifaces as ni
 
 from PIL import Image, ImageDraw, ImageFont
 from picamera2 import Picamera2
@@ -350,6 +351,32 @@ if (window.location.search.includes('saved=1')) {{
 </html>
 """
 
+def connection_check(self, interface):
+    """
+    Update needed
+    """
+    ni.gateways()
+    interfaces = ni.interfaces()
+
+    if interface in interfaces:
+        try:
+            ip = ni.ifaddresses(interface)[ni.AF_INET][0]['addr']
+            # ni.ifaddresses(interface)[ni.]
+            print(f'{interface} IP address: {ip}')
+            if len(ip) > 7:
+                print(f"Using {interface} connection")
+
+                requests.head('http://google.com', timeout=5)
+                print("True connection to the internet is established")
+                # true_connection = True
+                return ip
+        except Exception as ex:
+            print(f"Connect_Exception: {interface}")
+            print(ex)
+
+        # Needs to ensure a real connection to the internet or continue
+        # to the next adapter.
+    return False
 
 class StreamingOutput(io.BufferedIOBase):
     def __init__(self):
