@@ -495,6 +495,9 @@ def save_config_route():
         elif key == "output_extension":
             if not value in ("jpg", "jpeg", "png"):
                 eroror_text += f"Invalid output_extension: {value}\n"
+        elif key == "camera_name":
+            if ' ' in value:
+                error_text += f"Invalid camera_name please use "_" instead of spaces."\n"
     if len(error_text) > 0:
         return error_text, 400
     else:
