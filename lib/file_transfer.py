@@ -171,6 +171,7 @@ class FileTransfer:
                     dest_list = ['.']
                 print(dest_list[:-1])
                 for d in dest_list[:-1]:
+                    print(f"d: {d}")
                     if d == "" or d == "/":
                         d = '/'
                     try:
