@@ -170,7 +170,7 @@ class FileTransfer:
                 except Exception as ex:
                     dest_list = self.destination
                     print('small destination: ', dest_list[0])
-                    print('small destination: ', dest_list[:-1])
+                    # print('small destination: ', dest_list[:-1])
                 for d in dest_list[:-1]:
                     print(f"d: {d}")
                     if d == "" or d == "/":
