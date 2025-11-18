@@ -173,11 +173,11 @@ class FileTransfer:
                 ftp_client.put(self.file, self.destination.split("/")[-1])
             except Exception as ex:
                 print("Transfer unsuccessful.")
+                print("self.file: ", self.file)
+                print("self.destination: ", self.destination.split("/")[-1])
                 print(ex)
                 return False
         except Exception as ex:
-            print("Couldn't split destination.")
-            print(ex)
             return False
         # try:
         #     ftp_client.put(self.file, self.destination)
