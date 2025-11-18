@@ -491,7 +491,7 @@ def save_config_route():
     error_text = """"""
     for key, value in config_key_value.items():
         if key == "rotation":
-            if not rotation in (0, 90, 180, 270):
+            if not value in (0, 90, 180, 270):
                 error_text += f"Invalid rotation: {value}\n"
         elif key == "time_before_image":
             if not value.isnumeric():
@@ -504,7 +504,7 @@ def save_config_route():
                 error_text += f"Invalid output_height: {value}\n"
         elif key == "output_extension":
             if not value in ("jpg", "jpeg", "png"):
-                eroror_text += f"Invalid output_extension: {value}\n"
+                error_text += f"Invalid output_extension: {value}\n"
         elif key == "camera_name":
             if ' ' in value:
                 error_text += f"Invalid camera_name please use '_' (underscore) instead of spaces.\n"
