@@ -579,8 +579,21 @@ def capture_embedded_photo():
     background.save(output_buffer, format="jpeg", quality=100)
     output_buffer.seek(0)
 
+    file_name = f"{globals()['output_folder']}/{globals()['camera_name']}_{file_date_string()}.jpg"
 
-    background.save(f"{globals()['output_folder']}/{globals()['camera_name']}_{file_date_string()}.jpg", format="jpeg")
+    background.save(file_name, format="jpeg")
+    try:
+        trasfer = ft.FileTransfer(
+            globals()['ftp-server'],
+            globals()['ftp-username'],
+            globals()['ftp-password'],
+            globals()['file_name'],
+            globals()['ftp-destination'],
+            globals()['ftp-port'],
+        )
+    except Exception as ex:
+        print("Couldn't transfer file to FTP server.")
+        print(ex)
 
     return Response(output_buffer.getvalue(), mimetype='image/jpeg')
 
