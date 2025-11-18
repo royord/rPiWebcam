@@ -481,12 +481,12 @@ def config():
 def save_config_route():
     # rotation = int(request.form['rotation'])
     config_key_value = request.form
-    try:
-        save_config(config_key_value)
-        return redirect('/config.html?saved=1')
-    except Exception as e:
-        print(e)
-        return "Invalid rotation", 400
+    # try:
+    #     save_config(config_key_value)
+    #     return redirect('/config.html?saved=1')
+    # except Exception as e:
+    #     print(e)
+    #     return "Invalid rotation", 400
 
     error_text = """"""
     for key, value in config_key_value.items():
@@ -507,10 +507,12 @@ def save_config_route():
                 eroror_text += f"Invalid output_extension: {value}\n"
         elif key == "camera_name":
             if ' ' in value:
-                error_text += f"Invalid camera_name please use "_" instead of spaces."\n"
+                error_text += f"Invalid camera_name please use '_' (underscore) instead of spaces.\n"
+
     if len(error_text) > 0:
         return error_text, 400
     else:
+        save_config(config_key_value)
         return redirect('/config.html?saved=1')
 
     # print(config_key_value)
