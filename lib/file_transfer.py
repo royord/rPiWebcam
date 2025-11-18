@@ -2,7 +2,7 @@ import os
 import time
 
 import paramiko
-from paramiko import SSHClient, AutoAddPolicy
+from paramiko import SSHClient, AutoAddPolicy, file
 import scp
 import ftplib
 import sys
@@ -170,11 +170,12 @@ class FileTransfer:
                     ftp_client.mkdir(d)
                     ftp_client.chdir(d)
             try:
-                ftp_client.put(self.file, self.destination.split("/")[-1])
+                destination = (f'{self.destination}/{selffile.split("/")[-1]}')
+                ftp_client.put(self.file, destination)
             except Exception as ex:
                 print("Transfer unsuccessful.")
                 print("self.file: ", self.file)
-                print("self.destination: ", self.destination.split("/")[-1])
+                print("destination: ", destination)
                 print(ex)
                 return False
         except Exception as ex:
