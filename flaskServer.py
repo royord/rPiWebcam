@@ -30,6 +30,7 @@ os.environ["LIBCAMERA_LOG_LEVELS"] = "3"
 CONFIG_FILE = 'cam_config.cfg'  # File to save/load rotation (INI format)
 
 default_config = {
+    'ftp-mode': 'sftp',
     'ftp-server': 'ftp_server',
     'ftp-port': '22',
     'ftp-username': 'username',
@@ -257,6 +258,10 @@ def generate_config_page():
 <form method="POST" action="/save_config">
     <table>
         <tr><td colspan=2><h2>Transfer Configuration<h2></td></tr>
+        <tr>
+            <td>ftp-mode:</td>
+            <td><input type="text" name="ftp-mode" value="{globals()['ftp-mode']}"></td>
+        </tr>
         <tr>
             <td>ftp-server:</td>
             <td><input type="text" name="ftp-server" value="{globals()['ftp-server']}"></td>
