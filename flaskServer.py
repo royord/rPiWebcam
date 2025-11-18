@@ -42,6 +42,7 @@ default_config = {
     'output_quality':'100',
     'output_filetype':'jpg',
     'output_max_filesize_kb':0,
+    'output_folder':'image_dir',
     'embed_timestamp': 'embed_timestamp',
     'file_name': 'file_name',
     'text_size': '18',
