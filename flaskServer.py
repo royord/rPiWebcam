@@ -354,7 +354,7 @@ if (window.location.search.includes('saved=1')) {{
 </html>
 """
 
-def connection_check(self, interface):
+def connection_check(interface):
     """
     Update needed
     """
@@ -392,7 +392,7 @@ class StreamingOutput(io.BufferedIOBase):
             logging.debug(f"New frame written: {len(buf)} bytes")
             self.condition.notify_all()
 
-def update_rtc_time(self):
+def update_rtc_time():
     """
     Update the time from the internet and then set the hardware
     clock. Note that this can't be checked until on a linux system.
@@ -522,8 +522,8 @@ def capture_photo():
     photo_buffer.seek(0)
     return Response(photo_buffer.getvalue(), mimetype='image/jpeg')
 
-def file_date_string(self):
-    string = time.strftime('%Y%m%d_%H%M%S', self.current_time())
+def file_date_string():
+    string = time.strftime('%Y%m%d_%H%M%S', current_time())
     return string
 
 @app.route('/capture_embedded.jpg')
