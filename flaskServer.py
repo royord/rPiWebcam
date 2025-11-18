@@ -580,7 +580,7 @@ def capture_embedded_photo():
     output_buffer.seek(0)
 
 
-    background.save(f"{globals()['camera_name']}_{file_date_string()}.jpg", format="jpeg")
+    background.save(f"{globals()['output_folder']}/{globals()['camera_name']}_{file_date_string()}.jpg", format="jpeg")
 
     return Response(output_buffer.getvalue(), mimetype='image/jpeg')
 
