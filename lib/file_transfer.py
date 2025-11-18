@@ -22,7 +22,7 @@ class FileTransfer:
         self.destination = destination
         if self.destination.endswith("/"):
             self.destination = self.destination[:-1]
-        elif self.destination.startswith("./"):
+        if self.destination.startswith("./"):
             self.destination = self.destination[2:]
 
         print(f"self.destination: {self.destination}")
