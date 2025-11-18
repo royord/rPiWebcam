@@ -66,16 +66,14 @@ def load_config():
             for key, value in config.items('camera'):
                 configs[key] = config.get('camera', key)
                 print("Current config: ", key, " = ", value)
-    # globals().update(configs)
-    # print(globals())
-    globals().update(configs)
-    print(globals())
 
     for key, value in default_config.items():
         if key not in globals():
             globals()[key] = value
             configs[key] = value
-    # save_config(configs)
+            save_config(configs)
+
+    globals().update(configs)
 
 def current_time():
     current_time = time.localtime()
