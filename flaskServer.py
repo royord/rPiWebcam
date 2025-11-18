@@ -588,7 +588,7 @@ def capture_embedded_photo():
             globals()['ftp-username'],
             globals()['ftp-password'],
             'SFTP',
-            globals()['file_name'],
+            file_name,
             globals()['ftp-destination'],
             globals()['ftp-port'],
         )
