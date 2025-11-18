@@ -260,6 +260,10 @@ def generate_config_page():
             <td><input type="text" name="ftp-server" value="{globals()['ftp-server']}"></td>
         </tr>
         <tr>
+            <td>ftp-port:</td>
+            <td><input type="text" name="ftp-port" value="{globals()['ftp-port']}"></td>
+        </tr>
+        <tr>
             <td>ftp-username:</td>
             <td><input type="text" name="ftp-username" value="{globals()['ftp-username']}"></td>
         </tr>
