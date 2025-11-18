@@ -19,6 +19,8 @@ class FileTransfer:
         self.password = password
         self.ftmode = ftmode.lower()
         self.file = file
+        if destination.endswith("/"):
+            destination = destination[:-1]
         self.destination = destination
 
         self.file_size_bytes = os.path.getsize(file)
