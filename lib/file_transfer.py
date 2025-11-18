@@ -158,23 +158,28 @@ class FileTransfer:
             return False
         print("Unsplit self.destination: ", self.destination)
         try:
-            try:
-                dest_list = self.destination.split("/")
-            except Exception as ex:
-                dest_list = ['.']
-            print(dest_list[:-1])
-            for d in dest_list[:-1]:
-                if d == "" or d == "/":
-                    d = '/'
+            if self.destination != ".":
                 try:
-                    ftp_client.chdir(d)
-                    print("Directory change: ", d)
-                except IOError:
-                    print("Creating directory: " + d)
-                    ftp_client.mkdir(d)
-                    ftp_client.chdir(d)
+                    dest_list = self.destination.split("/")
+                except Exception as ex:
+                    dest_list = ['.']
+                print(dest_list[:-1])
+                for d in dest_list[:-1]:
+                    if d == "" or d == "/":
+                        d = '/'
+                    try:
+                        ftp_client.chdir(d)
+                        print("Directory change: ", d)
+                    except IOError:
+                        print("Creating directory: " + d)
+                        ftp_client.mkdir(d)
+                        ftp_client.chdir(d)
 
-            destination = (f'{self.destination}/{self.file.split("/")[-1]}')
+                destination = (f'{self.destination}/{self.file.split("/")[-1]}')
+            else:
+                destination = self.file.split("/")[-1]
+
+            # Move the file now that the folder exists
             try:
                 ftp_client.put(self.file, destination)
             except Exception as ex:
