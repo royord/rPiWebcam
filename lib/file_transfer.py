@@ -169,8 +169,9 @@ class FileTransfer:
                     print("Creating directory: " + d)
                     ftp_client.mkdir(d)
                     ftp_client.chdir(d)
+
+            destination = (f'{self.destination}/{self.file.split("/")[-1]}')
             try:
-                destination = (f'{self.destination}/{selffile.split("/")[-1]}')
                 ftp_client.put(self.file, destination)
             except Exception as ex:
                 print("Transfer unsuccessful.")
