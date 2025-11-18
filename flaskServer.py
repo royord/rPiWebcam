@@ -54,7 +54,6 @@ default_config = {
     'camera_url': 'camera_urls'
 }
 
-
 def load_config():
     """Load rotation from config file; default to 270."""
     configs = {}
@@ -478,6 +477,29 @@ def save_config_route():
     except Exception as e:
         print(e)
         return "Invalid rotation", 400
+
+    error_text = """"""
+    for key, value in config_key_value.items():
+        if key == "rotation":
+            if not rotation in (0, 90, 180, 270):
+                error_text += f"Invalid rotation: {value}\n"
+        elif key == "time_before_image":
+            if not value.isnumeric():
+                error_text += f"Invalid time_before_image: {value}\n"
+        elif key == "output_width":
+            if not value.isnumeric():
+                error_text += f"Invalid output_width: {value}\n"
+        elif key == "output_height":
+            if not value.isnumeric():
+                error_text += f"Invalid output_height: {value}\n"
+        elif key == "output_extension":
+            if not value in ("jpg", "jpeg", "png"):
+                eroror_text += f"Invalid output_extension: {value}\n"
+    if len(error_text) > 0:
+        return error_text, 400
+    else:
+        return redirect('/config.html?saved=1')
+
     # print(config_key_value)
     # for key, value in config_key_value.items():
     #     print(key, value)
