@@ -30,6 +30,8 @@ os.environ["LIBCAMERA_LOG_LEVELS"] = "3"
 CONFIG_FILE = 'cam_config.cfg'  # File to save/load rotation (INI format)
 
 default_config = {
+    'ftp-server': 'ftp_server',
+    'ftp-port': '22',
     'ftp-username': 'username',
     'ftp-password': 'password',
     'ftp-destination': 'ftp_destination_list',
