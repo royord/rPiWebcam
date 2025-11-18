@@ -67,7 +67,7 @@ def load_config():
         if config.has_section('camera') and config.has_option('camera', 'rotation'):
             for key, value in config.items('camera'):
                 configs[key] = config.get('camera', key)
-                print("Current config: ", key, " = ", value)
+                # print("Current config: ", key, " = ", value)
 
     for key, value in default_config.items():
         if key not in globals():
