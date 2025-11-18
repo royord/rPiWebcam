@@ -158,9 +158,13 @@ class FileTransfer:
             return False
         print("Unsplit self.destination: ", self.destination)
         try:
-            print(self.destination.split("/")[:-1])
-            for d in self.destination.split("/")[:-1]:
-                if d == "":
+            try:
+                dest_list = self.destination.split("/")
+            except Exception as ex:
+                dest_list = ['.']
+            print(dest_list[:-1])
+            for d in dest_list[:-1]:
+                if d == "" or d == "/":
                     d = '/'
                 try:
                     ftp_client.chdir(d)
