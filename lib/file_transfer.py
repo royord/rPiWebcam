@@ -13,19 +13,19 @@ class FileTransfer:
         self.ftpserver = ftpserver
 
         # Set the default port for SFTP or ftp if not set
-        self.ftpmode = ftmode
+        self.ftpmode = ftmode.lowercase()
         self.ftpport = ftpport
         self.username = username
         self.password = password
-        self.ftmode = ftmode
+        self.ftmode = ftmode.lowercase()
         self.file = file
         self.destination = destination
 
         self.file_size_bytes = os.path.getsize(file)
         self.starttime = time.mktime(time.localtime())
-        if ftpport == None and ftmode == "sftp":
+        if ftpport == None and self.ftmode == "sftp":
             self.ftpport = 22
-        elif ftpport == None and ftmode == "ftp":
+        elif ftpport == None and self.ftmode == "ftp":
             self.ftpport = 21
         else:
             self.ftpport = ftpport
