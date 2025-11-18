@@ -156,7 +156,7 @@ class FileTransfer:
             print("Couldn't connect to SCP site.")
             print(ex)
             return False
-        print(self.destination)
+        print("Unsplit self.destination: ", self.destination)
         try:
             print(self.destination.split("/")[:-1])
             for d in self.destination.split("/")[:-1]:
