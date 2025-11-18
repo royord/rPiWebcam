@@ -41,6 +41,7 @@ default_config = {
     'output_extension': 'extension',
     'output_quality':'100',
     'output_filetype':'jpg',
+    'output_max_filesize_kb':0,
     'embed_timestamp': 'embed_timestamp',
     'file_name': 'file_name',
     'text_size': '18',
