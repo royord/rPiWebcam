@@ -167,20 +167,21 @@ class FileTransfer:
             if self.destination != ".":
                 try:
                     dest_list = self.destination.split("/")
-                    for d in dest_list[:-1]:
-                        print(f"d: {d}")
-                        if d == "" or d == "/":
-                            d = '/'
-                        try:
-                            ftp_client.chdir(d)
-                            print("Directory change: ", d)
-                        except IOError:
-                            print("Creating directory: " + d)
-                            ftp_client.mkdir(d)
-                            ftp_client.chdir(d)
                 except Exception as ex:
                     dest_list = self.destination
-                    print(dest_list[:-1])
+                    print('small destination: ', dest_list[0])
+                    print('small destination: ', dest_list[:-1])
+                for d in dest_list[:-1]:
+                    print(f"d: {d}")
+                    if d == "" or d == "/":
+                        d = '/'
+                    try:
+                        ftp_client.chdir(d)
+                        print("Directory change: ", d)
+                    except IOError:
+                        print("Creating directory: " + d)
+                        ftp_client.mkdir(d)
+                        ftp_client.chdir(d)
 
                 destination = (f'{self.destination}/{self.file.split("/")[-1]}')
             else:
