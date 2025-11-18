@@ -21,7 +21,8 @@ class FileTransfer:
         self.file = file
         if destination.endswith("/"):
             destination = destination[:-1]
-        self.destination = destination
+        if destination.startswith("./"):
+            destination = destination[2:]
 
         self.file_size_bytes = os.path.getsize(file)
         self.starttime = time.mktime(time.localtime())
