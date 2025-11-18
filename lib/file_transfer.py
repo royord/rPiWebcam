@@ -19,10 +19,11 @@ class FileTransfer:
         self.password = password
         self.ftmode = ftmode.lower()
         self.file = file
-        if destination.endswith("/"):
-            self.destination = destination[:-1]
-        elif destination.startswith("./"):
-            self.destination = destination[2:]
+        self.destination = destination
+        if self.destination.endswith("/"):
+            self.destination = self.destination[:-1]
+        elif self.destination.startswith("./"):
+            self.destination = self.destination[2:]
 
         print(f"self.destination: {self.destination}")
 
