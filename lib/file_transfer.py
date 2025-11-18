@@ -24,6 +24,8 @@ class FileTransfer:
         elif destination.startswith("./"):
             self.destination = destination[2:]
 
+        print(f"self.destination: {self.destination}")
+
         self.file_size_bytes = os.path.getsize(file)
         self.starttime = time.mktime(time.localtime())
         if ftpport == None and self.ftmode == "sftp":
