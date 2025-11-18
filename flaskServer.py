@@ -493,7 +493,7 @@ def save_config_route():
         if key == "rotation":
             if not value.isnumeric():
                 error_text += f"Invalid rotation: {value}\n"
-            if not value in (0, 90, 180, 270):
+            if not int(value) in (0, 90, 180, 270):
                 error_text += f"Invalid rotation: {value}\n"
         elif key == "time_before_image":
             if not value.isnumeric():
