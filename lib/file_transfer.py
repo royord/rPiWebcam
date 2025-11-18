@@ -30,10 +30,11 @@ class FileTransfer:
         else:
             self.ftpport = ftpport
 
-        if ftmode == "sftp":
+        if self.ftmode == "sftp":
             print("SFTP")
             self.scp_file()
         else:
+            print("FTP")
             self.ftp_file()
         pass
     
