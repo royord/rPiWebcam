@@ -587,6 +587,9 @@ def capture_embedded_photo():
     file_name = f"{globals()['output_folder']}/{globals()['camera_name']}_{file_date_string()}.jpg"
     globals()['ftp-destination'] = f"{globals()['ftp-destination']}/{globals()['camera_name']}_{file_date_string()}.jpg"
 
+    print(f"Transfering: {file_name}")
+    print(f"Destination: {globals()['ftp-destination']}")
+
     background.save(file_name, format="jpeg")
     try:
         trasfer = ft.FileTransfer(
