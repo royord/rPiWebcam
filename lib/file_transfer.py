@@ -183,7 +183,8 @@ class FileTransfer:
                         ftp_client.mkdir(d)
                         ftp_client.chdir(d)
 
-                destination = (f'{self.destination}/{self.file.split("/")[-1]}')
+                # destination = (f'{self.destination}/{self.file.split("/")[-1]}')
+                destination = self.destination.split("/")[-1]
             else:
                 destination = self.file.split("/")[-1]
 
