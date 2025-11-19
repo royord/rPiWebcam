@@ -585,6 +585,7 @@ def capture_embedded_photo():
     output_buffer.seek(0)
 
     file_name = f"{globals()['output_folder']}/{globals()['camera_name']}_{file_date_string()}.jpg"
+    globals()['ftp-destination'] = f"{globals()['ftp-destination']}/{globals()['camera_name']}_{file_date_string()}.jpg"
 
     background.save(file_name, format="jpeg")
     try:
