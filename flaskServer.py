@@ -585,7 +585,11 @@ def capture_embedded_photo():
     output_buffer.seek(0)
 
     file_name = f"{globals()['output_folder']}/{globals()['camera_name']}_{file_date_string()}.jpg"
-    globals()['ftp-destination'] = f"{globals()['ftp-destination']}/{globals()['camera_name']}_{file_date_string()}.jpg"
+    if globals()['ftp-destination'].endswith('/'):
+        globals()['ftp-destination'] = globals()['ftp-destination'][:-1]
+        globals()['ftp-destination'] = f"{globals()['ftp-destination']}/{globals()['camera_name']}_{file_date_string()}.jpg"
+    else:
+        globals()['ftp-destination'] = f"{globals()['ftp-destination']}"
 
     print(f"Transfering: {file_name}")
     print(f"Destination: {globals()['ftp-destination']}")
