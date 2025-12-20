@@ -585,31 +585,32 @@ def capture_embedded_photo():
     output_buffer.seek(0)
     destination = ""
     file_name = f"{globals()['output_folder']}/{globals()['camera_name']}_{file_date_string()}.jpg"
-    if globals()['ftp-destination'].endswith('/'):
-        destination = globals()['ftp-destination'][:-1]
-        destination = f"{destination}/{globals()['camera_name']}_{file_date_string()}.jpg"
-    else:
-        destination = f"{globals()['ftp-destination']}"
+    for dest in globals()['ftp-destination'].split(','):
+        if dest.endswith('/'):
+            destination = dest[:-1]
+            destination = f"{destination}/{globals()['camera_name']}_{file_date_string()}.jpg"
+        else:
+            destination = f"{dest}"
 
-    print(f"Transfering: {file_name}")
-    print(f"Destination: {globals()['ftp-destination']}")
+        print(f"Transfering: {file_name}")
+        print(f"Destination: {destination}")
 
-    background.save(file_name, format="jpeg")
-    if destination != "":
-        try:
-            trasfer = ft.FileTransfer(
-                globals()['ftp-server'],
-                globals()['ftp-username'],
-                globals()['ftp-password'],
-                'SFTP',
-                file_name,
-                # globals()['ftp-destination'],
-                destination,
-                globals()['ftp-port'],
-            )
-        except Exception as ex:
-            print("Couldn't transfer file to FTP server.")
-            print(ex)
+        background.save(file_name, format="jpeg")
+        if destination != "":
+            try:
+                trasfer = ft.FileTransfer(
+                    globals()['ftp-server'],
+                    globals()['ftp-username'],
+                    globals()['ftp-password'],
+                    'SFTP',
+                    file_name,
+                    # globals()['ftp-destination'],
+                    destination,
+                    globals()['ftp-port'],
+                )
+            except Exception as ex:
+                print("Couldn't transfer file to FTP server.")
+                print(ex)
 
     return Response(output_buffer.getvalue(), mimetype='image/jpeg')
 
