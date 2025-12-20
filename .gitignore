@@ -2,4 +2,5 @@
 !/Development/flaskTestServer.py
 !/Development/scpTest.py
 cam_config.cfg
-!./cam_config.cfg
+/image_dir/*
+embedded.jpg
