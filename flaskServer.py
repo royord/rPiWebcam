@@ -618,8 +618,15 @@ def background_capture_task(delay):
     while True:
         try:
             if delay > 0:
+                total_delayed = 0
                 print(f"Background thread sleeping for {delay} seconds...")
-                time.sleep(delay)
+                # Every 10 seconds in the delay we're going to print something so that
+                # we can see the logs as they're delaying
+                while total_delayed < delay:
+                    time.sleep(1)
+                    total_delayed += 1
+                    if total_delayed % 10 == 0:
+                        print(f"Background thread sleeping for {delay} seconds... {total_delayed} seconds elapsed.")
             capture_embedded_photo()
         except Exception as ex:
             print("Error in background thread.")
