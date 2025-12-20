@@ -699,6 +699,8 @@ if __name__ == '__main__':
     print("Capture: Button on index page saves/displays latest photo")
     print("Config: Set rotation at /config.html (restart server to apply)")
 
+    thread = Thread(target=background_capture_task, args=(int(globals()['time_before_image']),), daemon=True)
+    thread.start()
     try:
         app.run(host='0.0.0.0', port=8000, threaded=True, use_reloader=False)
     finally:
