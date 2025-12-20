@@ -583,31 +583,33 @@ def capture_embedded_photo():
     output_buffer = BytesIO()
     background.save(output_buffer, format="jpeg", quality=100)
     output_buffer.seek(0)
-
+    destination = ""
     file_name = f"{globals()['output_folder']}/{globals()['camera_name']}_{file_date_string()}.jpg"
     if globals()['ftp-destination'].endswith('/'):
-        globals()['ftp-destination'] = globals()['ftp-destination'][:-1]
-        globals()['ftp-destination'] = f"{globals()['ftp-destination']}/{globals()['camera_name']}_{file_date_string()}.jpg"
+        destination = globals()['ftp-destination'][:-1]
+        destination = f"{destination}/{globals()['camera_name']}_{file_date_string()}.jpg"
     else:
-        globals()['ftp-destination'] = f"{globals()['ftp-destination']}"
+        destination = f"{globals()['ftp-destination']}"
 
     print(f"Transfering: {file_name}")
     print(f"Destination: {globals()['ftp-destination']}")
 
     background.save(file_name, format="jpeg")
-    try:
-        trasfer = ft.FileTransfer(
-            globals()['ftp-server'],
-            globals()['ftp-username'],
-            globals()['ftp-password'],
-            'SFTP',
-            file_name,
-            globals()['ftp-destination'],
-            globals()['ftp-port'],
-        )
-    except Exception as ex:
-        print("Couldn't transfer file to FTP server.")
-        print(ex)
+    if destination != "":
+        try:
+            trasfer = ft.FileTransfer(
+                globals()['ftp-server'],
+                globals()['ftp-username'],
+                globals()['ftp-password'],
+                'SFTP',
+                file_name,
+                # globals()['ftp-destination'],
+                destination,
+                globals()['ftp-port'],
+            )
+        except Exception as ex:
+            print("Couldn't transfer file to FTP server.")
+            print(ex)
 
     return Response(output_buffer.getvalue(), mimetype='image/jpeg')
 
