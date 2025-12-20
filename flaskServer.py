@@ -611,6 +611,18 @@ def capture_embedded_photo():
 
     return Response(output_buffer.getvalue(), mimetype='image/jpeg')
 
+def background_capture_task(delay):
+    while True:
+        try:
+            if delay > 0:
+                print(f"Background thread sleeping for {delay} seconds...")
+                time.sleep(delay)
+            capture_embedded_photo()
+        except Exception as ex:
+            print("Error in background thread.")
+            print(ex)
+            time.sleep(30)
+
 def create_embed_text():
     """
     This method is going to create the text that is going to be put onto the
