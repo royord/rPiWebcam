@@ -1,0 +1,1 @@
+camera1 directory, make as many copies as you need for other cameras.
