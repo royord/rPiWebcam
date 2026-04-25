@@ -4,3 +4,5 @@
 cam_config.cfg
 /image_dir/*
 embedded.jpg
+/WebPages/MKOnly/
+/WebPages/config.php
