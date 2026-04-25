@@ -1,7 +1,7 @@
 <?php
 // email_checker_validated.php - With whitelist validation
-require_once 'config.php';
-require_once 'enhanced_sanitizer.php';
+require_once '..\config.php';
+//require_once 'enhanced_sanitizer.php';
 require_once 'email_validator.php';
 
 class EmailChecker {
@@ -105,4 +105,4 @@ class EmailChecker {
         $body = $this->getBodyPart($emailId, $structure, 'HTML');
 
         if (empty($body)) {
-            $body = $this->getBodyPart($emailI
+            $body = $this->getBodyPart($emailIi
