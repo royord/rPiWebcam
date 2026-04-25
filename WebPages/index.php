@@ -271,6 +271,13 @@ catch(Exception $ex){
           <li class="nav-item">
             <!--<a class="nav-link" href="index.html#">Nearby</a>-->
             <!--<a class="nav-link" aria-current="page" href="<?php //echo $actual_link; ?>?nav=nearby">Nearby</a>-->
+              <a class="nav-link" aria-current="page" href="<?php echo $actual_link?>?nav=hydro">Hydro Data</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" aria-current="page" href="<?php echo $actual_link?>?nav=sensordata">Sensor Data</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" aria-current="page" href="<?php echo $actual_link?>?nav=riverinfo">River Flows</a>
           </li>
           <!--
           <li class="nav-item">
@@ -360,7 +367,5 @@ catch(Exception $ex){
   <!-- End Content Section-->
 </main>
 <script src="assets/dist/js/bootstrap.bundle.min.js"></script>
-
-    
 
 </body></html>
