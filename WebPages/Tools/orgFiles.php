@@ -24,7 +24,7 @@ if (!is_dir($sourceDir)) {
 
 // Create the target base directory if it doesn't exist
 if (!is_dir($targetBaseDir)) {
-    mkdir($targetBaseDir, 0644, true);
+    mkdir($targetBaseDir, 755, true);
 }
 
 // Function to extract year and month from filename
@@ -62,13 +62,13 @@ foreach ($files as $file) {
         // Create year directory
         $yearDir = $targetBaseDir . $year . '/';
         if (!is_dir($yearDir)) {
-            mkdir($yearDir, 0644, true);
+            mkdir($yearDir, 755, true);
         }
 
         // Create month directory
         $monthDir = $yearDir . $month . '/';
         if (!is_dir($monthDir)) {
-            mkdir($monthDir, 0644, true);
+            mkdir($monthDir, 755, true);
         }
 
         // Move the file to the appropriate directory
