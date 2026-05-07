@@ -17,6 +17,7 @@ import time
 from threading import Condition, Thread
 from flask import Flask, Response, redirect, request, render_template_string
 from io import BytesIO
+from flask import send_file
 import netifaces as ni
 import lib.file_transfer as ft
 
@@ -356,7 +357,15 @@ def generate_config_page():
             <td><input type="text" name="camera_url" value="{globals()['camera_url']}"></td>       
         </tr>
         <tr>
-            <td colspan=2><input type="submit" value="Save Configuration"></td>       
+            <td colspan=2>
+                <input type="submit" value="Save Configuration">
+            </td>
+        </tr>
+        <tr><br></tr>
+        <tr>
+            <td colspan=2>
+                <a href="/export_config" style="display:inline-block; padding:8px 16px; background:#007bff; color:#fff; text-decoration:none; border-radius:4px;">Export Configuration</a>
+            </td>
         </tr>
     </table>
 </form>
@@ -536,6 +545,17 @@ def save_config_route():
     # else:
     #     return "Invalid rotation", 400
     return config_key_value
+
+
+@app.route('/export_config')
+def export_config():
+    """Return the current config file as a downloadable file."""
+    return send_file(
+        CONFIG_FILE,
+        as_attachment=True,
+        download_name='camera_config.cfg',
+        mimetype='text/plain',
+    )
 
 
 def gen_frames():
