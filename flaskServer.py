@@ -39,8 +39,8 @@ default_config = {
     'camera_name': 'camera_name',
     'rotation': '0',
     'time_before_image': '10',
-    'output_width': 'width',
-    'output_height': 'height',
+    'output_width': None,
+    'output_height': None,
     'output_extension': 'extension',
     'output_quality':'100',
     'output_filetype':'jpg',
@@ -168,6 +168,10 @@ if ROTATION in (90, 270):
     WIDTH, HEIGHT = NATIVE_SIZE[1], NATIVE_SIZE[0]
 else:
     WIDTH, HEIGHT = NATIVE_SIZE
+
+# Set default output dimensions to max sensor size
+default_config['output_width'] = str(NATIVE_SIZE[0])
+default_config['output_height'] = str(NATIVE_SIZE[1])
 
 # Create appropriate Transform
 if ROTATION == 0:
