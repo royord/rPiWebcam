@@ -370,8 +370,24 @@ def generate_config_page():
     </table>
 </form>
 <p><a href="/">Back to Stream</a></p>
+<hr>
+<h3>Import Configuration</h3>
+<p>Upload a previously exported configuration file to apply its settings.</p>
+<form method="POST" action="/import_config" enctype="multipart/form-data">
+    <table>
+        <tr>
+            <td>Select config file:</td>
+            <td><input type="file" name="config_file" accept=".cfg,.ini"></td>
+        </tr>
+        <tr>
+            <td colspan=2><input type="submit" value="Import Configuration"></td>
+        </tr>
+    </table>
+</form>
 <script>
-if (window.location.search.includes('saved=1')) {{
+if (window.location.search.includes('imported=1')) {{
+    alert('Configuration imported successfully!');
+}} else if (window.location.search.includes('saved=1')) {{
     alert('Configuration saved!');
 }}
 </script>
@@ -556,6 +572,31 @@ def export_config():
         download_name='camera_config.cfg',
         mimetype='text/plain',
     )
+
+
+@app.route('/import_config', methods=['POST'])
+def import_config():
+    """Import configuration from an uploaded .cfg file."""
+    if 'config_file' not in request.files:
+        return 'No file provided', 400
+    uploaded = request.files['config_file']
+    if uploaded.filename == '':
+        return 'No file selected', 400
+    if not (uploaded.filename.endswith('.cfg') or uploaded.filename.endswith('.ini')):
+        return 'Invalid file type; expected .cfg or .ini', 400
+    try:
+        with open(CONFIG_FILE, 'w') as f:
+            f.write(uploaded.read().decode('utf-8'))
+        # Reload globals from the new config file
+        _cfg = configparser.ConfigParser()
+        _cfg.read(CONFIG_FILE)
+        if _cfg.has_section('camera'):
+            for key, value in _cfg.items('camera'):
+                globals()[key] = value
+        globals().update(dict(_cfg.items('camera')))
+        return redirect('/config.html?imported=1')
+    except Exception as e:
+        return f'Error importing config: {e}', 500
 
 
 def gen_frames():
