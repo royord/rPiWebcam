@@ -371,20 +371,38 @@ def generate_config_page():
 </form>
 <p><a href="/">Back to Stream</a></p>
 <hr>
-<h3>Import Configuration</h3>
-<p>Upload a previously exported configuration file to apply its settings.</p>
-<form method="POST" action="/import_config" enctype="multipart/form-data">
-    <table>
-        <tr>
-            <td>Select config file:</td>
-            <td><input type="file" name="config_file" accept=".cfg,.ini"></td>
-        </tr>
-        <tr>
-            <td colspan=2><input type="submit" value="Import Configuration"></td>
-        </tr>
-    </table>
-</form>
+<p><button id="openImportBtn" style="padding:8px 16px; background:#28a745; color:#fff; border:none; border-radius:4px; cursor:pointer;">Import Configuration</button></p>
+
+<!-- Modal -->
+<div id="importModal" style="display:none; position:fixed; z-index:999; left:0; top:0; width:100%; height:100%; overflow:auto; background:rgba(0,0,0,0.5);">
+    <div style="background:#fff; margin:10% auto; padding:24px; border-radius:8px; width:90%; max-width:480px; position:relative;">
+        <span id="closeImportBtn" style="position:absolute; top:8px; right:16px; font-size:24px; cursor:pointer; color:#999;">&times;</span>
+        <h2 style="margin-top:0;">Import Configuration</h2>
+        <p>Upload a previously exported configuration file to apply its settings.</p>
+        <form method="POST" action="/import_config" enctype="multipart/form-data">
+            <table>
+                <tr>
+                    <td style="padding:4px 12px 4px 0;">Select config file:</td>
+                    <td><input type="file" name="config_file" accept=".cfg,.ini"></td>
+                </tr>
+                <tr>
+                    <td colspan=2 style="padding-top:12px;">
+                        <input type="submit" value="Import Configuration" style="padding:8px 16px; background:#28a745; color:#fff; border:none; border-radius:4px; cursor:pointer;">
+                    </td>
+                </tr>
+            </table>
+        </form>
+    </div>
+</div>
 <script>
+(function() {{
+    var modal = document.getElementById('importModal');
+    var openBtn = document.getElementById('openImportBtn');
+    var closeBtn = document.getElementById('closeImportBtn');
+    openBtn.onclick = function() {{ modal.style.display = 'block'; }};
+    closeBtn.onclick = function() {{ modal.style.display = 'none'; }};
+    window.onclick = function(e) {{ if (e.target === modal) modal.style.display = 'none'; }};
+}})();
 if (window.location.search.includes('imported=1')) {{
     alert('Configuration imported successfully!');
 }} else if (window.location.search.includes('saved=1')) {{
