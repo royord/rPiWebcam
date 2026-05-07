@@ -10,6 +10,15 @@ Additional cameras may be needed in order to perform correct tests and developme
     - http://adafruit.com/product/4563
     - https://www.pishop.us/product/16mm-telephoto-lens-for-raspberry-pi-hq-camera-cs/
     - https://www.pishop.us/product/6mm-wide-angle-lens-for-raspberry-pi-hq-camera-cs/
+## HQ Camera Focus
+
+The Raspberry Pi HQ Camera uses a manual-focus lens — twist the lens barrel to adjust focus. If your image is soft or blurry, rotate the lens ring until the image is sharp.
+
+**Spacer rings:** Some HQ Camera kits include metal spacer rings between the lens and sensor. These are sometimes used for night-vision mods (removing the IR cover glass), but they throw the lens out of its designed working distance and make it impossible to focus. If you're not doing a night-vision mod, **do not install spacer rings** between the lens and the camera body.
+
+- https://www.raspberrypi.com/products/raspberry-pi-high-quality-camera/
+- https://forums.raspberrypi.com/viewtopic.php?t=346083
+
 - 2x - $22.00 - SD Card - https://a.co/d/71skmPG
 - 2x - $22.00 - Waterproof Case - https://a.co/d/15KyTVh
 - 1x - $14.00 - Cable Glands - https://a.co/d/e5Tha8L
