@@ -259,10 +259,16 @@ def generate_config_page():
 </head>
 <body>
 <h1>Camera Configuration</h1>
-<p>The following form allows you to configure the camera rotation. Click "Save Configuration" to save the new rotation to the config file.</p>
-<form method="POST" action="/save_config">
+
+<div style="margin-bottom:16px;">
+    <input type="button" id="topSaveBtn" value="Save Configuration" style="padding:8px 16px; background:#007bff; color:#fff; border:none; border-radius:4px; cursor:pointer;" onclick="document.getElementById('configForm').submit();">
+    <a href="/export_config" style="display:inline-block; padding:8px 16px; background:#007bff; color:#fff; text-decoration:none; border-radius:4px;">Export Configuration</a>
+    <button id="openImportBtn" style="padding:8px 16px; background:#28a745; color:#fff; border:none; border-radius:4px; cursor:pointer;">Import Configuration</button>
+</div>
+
+<form id="configForm" method="POST" action="/save_config">
     <table>
-        <tr><td colspan=2><h2>Transfer Configuration<h2></td></tr>
+        <tr><td colspan=2><h2>Transfer Configuration</h2></td></tr>
         <tr>
             <td>ftp-mode:</td>
             <td><input type="text" name="ftp-mode" value="{globals()['ftp-mode']}"></td>
@@ -288,7 +294,7 @@ def generate_config_page():
             <td><input type="text" name="ftp-destination" value="{globals()['ftp-destination']}"></td>
         </tr>
         <tr><br></tr>
-        <tr><td colspan=2><h2>Camera Config<h2></td></tr>
+        <tr><td colspan=2><h2>Camera Config</h2></td></tr>
         <tr>
             <td>camera_name:</td>
             <td><input type="text" name="camera_name" value="{globals()['camera_name']}"></td>
@@ -340,7 +346,7 @@ def generate_config_page():
             <td>text_background:</td>
             <td><input type="text" name="text_background" value="{globals()['text_background']}"></td>
         </tr>
-        </tr>
+        <tr>
             <td>camera_timezone:</td>
             <td><input type="text" name="camera_timezone" value="{globals()['camera_timezone']}"></td>
         </tr>
@@ -354,24 +360,16 @@ def generate_config_page():
         </tr>
         <tr>
             <td>camera_url:</td>
-            <td><input type="text" name="camera_url" value="{globals()['camera_url']}"></td>       
+            <td><input type="text" name="camera_url" value="{globals()['camera_url']}"></td>
         </tr>
         <tr>
             <td colspan=2>
-                <input type="submit" value="Save Configuration">
-            </td>
-        </tr>
-        <tr><br></tr>
-        <tr>
-            <td colspan=2>
-                <a href="/export_config" style="display:inline-block; padding:8px 16px; background:#007bff; color:#fff; text-decoration:none; border-radius:4px;">Export Configuration</a>
+                <input type="submit" value="Save Configuration" style="padding:8px 16px; background:#007bff; color:#fff; border:none; border-radius:4px; cursor:pointer;">
             </td>
         </tr>
     </table>
 </form>
 <p><a href="/">Back to Stream</a></p>
-<hr>
-<p><button id="openImportBtn" style="padding:8px 16px; background:#28a745; color:#fff; border:none; border-radius:4px; cursor:pointer;">Import Configuration</button></p>
 
 <!-- Modal -->
 <div id="importModal" style="display:none; position:fixed; z-index:999; left:0; top:0; width:100%; height:100%; overflow:auto; background:rgba(0,0,0,0.5);">
