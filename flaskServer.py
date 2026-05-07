@@ -701,7 +701,7 @@ if __name__ == '__main__':
 
     # Start recording to output
     # picam2.start_recording(JpegEncoder(q=85), FileOutput(output))
-    picam2.start_recording(JpegEncoder(q=100), FileOutput(output))
+    picam2.start_recording(JpegEncoder(q=60), FileOutput(output))
 
     # logging.basicConfig(level=logging.DEBUG)
 
