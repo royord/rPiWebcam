@@ -402,7 +402,7 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
 <div class="settings-pane">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <div class="pane-label">Settings</div>
-        <button type="submit" class="btn btn-primary">Save Configuration</button>
+        <button type="button" class="btn btn-primary" id="saveBtn">Save Configuration</button>
     </div>
     <div class="tab-btns">
         <button type="button" class="tab-btn active" onclick="switchTab(event, 'tab-camera')">Camera Settings</button>
@@ -703,6 +703,35 @@ function switchTab(e, tabId) {{
     var name = tabId.replace('tab-', '');
     try {{ document.getElementById('_active_tab').value = name; localStorage.setItem('configActiveTab', name); }} catch(e) {{}}
 }}
+
+// Save button: AJAX save then reload page
+(function() {{
+    var saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) {{
+        saveBtn.addEventListener('click', function() {{
+            var form = document.getElementById('configForm');
+            var fd = new FormData(form);
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+            fetch('/save_config', {{
+                method: 'POST',
+                body: fd
+            }}).then(function(r) {{
+                if (r.status === 200) {{
+                    // Reload page to re-read config file with saved values
+                    window.location.reload();
+                }} else {{
+                    return r.text().then(function(t) {{ alert('Save failed: ' + t); }}, function() {{ alert('Save failed'); }});
+                }}
+            }}).catch(function(e) {{
+                alert('Save failed: ' + e.message);
+            }}).finally(function() {{
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Configuration';
+            }});
+        }});
+    }}
+}})();
 
 // Restore tab and show toast on load
 (function() {{
