@@ -113,6 +113,12 @@ def save_config(rotation):
     try:
         for key, value in rotation.items():
             # print(key, value)
+            # Convert 'true'/'false' strings to actual booleans for checkbox fields
+            if key in ('embed_timestamp', 'camera_daylight_savings'):
+                if value == 'true':
+                    value = True
+                elif value == 'false':
+                    value = False
             try:
                 configs[key] = value
             except Exception as e:
