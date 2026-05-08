@@ -18,6 +18,7 @@ from threading import Condition, Thread
 from flask import Flask, Response, redirect, request, render_template_string
 from io import BytesIO
 from flask import send_file
+import sys
 import netifaces as ni
 import lib.file_transfer as ft
 
@@ -652,6 +653,9 @@ def save_config_route():
     #     print(e)
     #     return "Invalid rotation", 400
 
+    old_port = globals().get('camera_port', '80')
+    new_port = config_key_value.get('camera_port', old_port)
+
     error_text = """"""
     for key, value in config_key_value.items():
         if key == "rotation":
@@ -674,11 +678,17 @@ def save_config_route():
         elif key == "camera_name":
             if ' ' in value:
                 error_text += f"Invalid camera_name please use '_' (underscore) instead of spaces.\n"
+        elif key == "camera_port":
+            if not value.isnumeric() or not 1 <= int(value) <= 65535:
+                error_text += f"Invalid camera_port: {value}\n"
 
     if len(error_text) > 0:
         return error_text, 400
     else:
         save_config(config_key_value)
+        if new_port != old_port:
+            print(f"Port changed from {old_port} to {new_port} — restarting server...")
+            os.execv(sys.executable, [sys.executable] + sys.argv + ['--restart-port', new_port])
         return redirect('/config.html?saved=1')
 
     # print(config_key_value)
@@ -887,6 +897,12 @@ def create_embed_text():
     return canvas
 
 if __name__ == '__main__':
+    # Handle restart with port override
+    if '--restart-port' in sys.argv:
+        restart_port = sys.argv[sys.argv.index('--restart-port') + 1]
+        globals()['camera_port'] = restart_port
+        print(f"Restarting on port {restart_port}...")
+
     # Configure camera with detected max size
     picam2 = Picamera2()
     config = picam2.create_video_configuration(
@@ -903,7 +919,7 @@ if __name__ == '__main__':
 
     print(f"Loaded rotation from config: {ROTATION}°")
     print(f"Detected max native size: {NATIVE_SIZE}")
-    print(f"Server starting on http://0.0.0.0:8000 (local: http://localhost:8000)")
+    print(f"Server starting on http://0.0.0.0:{globals()['camera_port']} (local: http://localhost:{globals()['camera_port']})")
     print(f"Streaming rotated {ROTATION}° video at {WIDTH}x{HEIGHT}")
     print("New: Fullscreen view at /full.html")
     print("Capture: Button on index page saves/displays latest photo")
