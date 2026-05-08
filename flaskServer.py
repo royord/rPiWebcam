@@ -517,7 +517,7 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
 </div>
 
 <!-- Tab 3: Live View -->
-<div id="tab-live" class="tab-content">
+<div id="tab-live" class="tab-content active">
     <div class="section-title">Live Preview</div>
     <div class="stream-preview">
         <img src="/stream.mjpg" />
