@@ -463,6 +463,47 @@ def generate_config_page():
     openBtn.onclick = function() {{ modal.style.display = 'block'; }};
     closeBtn.onclick = function() {{ modal.style.display = 'none'; }};
     window.onclick = function(e) {{ if (e.target === modal) modal.style.display = 'none'; }};
+
+    // Unsaved-changes guard: compare current field values to originals
+    var originalValues = {{
+        'ftp-mode': '{globals()['ftp-mode']}',
+        'ftp-server': '{globals()['ftp-server']}',
+        'ftp-port': '{globals()['ftp-port']}',
+        'ftp-username': '{globals()['ftp-username']}',
+        'camera_name': '{globals()['camera_name']}',
+        'rotation': '{ROTATION}',
+        'time_before_image': '{globals()['time_before_image']}',
+        'output_width': '{globals()['output_width']}',
+        'output_height': '{globals()['output_height']}',
+        'output_extension': '{globals()['output_extension']}',
+        'embed_timestamp': _bool_val('embed_timestamp') ? 'true' : '',
+        'file_name': '{globals()['file_name']}',
+        'text_size': '{globals()['text_size']}',
+        'text_color': '{globals()['text_color']}',
+        'text_background': '{globals()['text_background']}',
+        'camera_timezone': '{globals()['camera_timezone']}',
+        'camera_daylight_savings': _bool_val('camera_daylight_savings') ? 'true' : '',
+        'camera_port': '{globals()['camera_port']}',
+        'camera_url': '{globals()['camera_url']}',
+    }};
+    var hasChanges = false;
+
+    document.getElementById('configForm').addEventListener('change', function(e) {{
+        hasChanges = true;
+    }});
+
+    window.addEventListener('beforeunload', function(e) {{
+        if (hasChanges) {{
+            e.preventDefault();
+            e.returnValue = '';
+        }}
+    }});
+
+    // Reset flag after save or import
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('saved') === '1' || params.get('imported') === '1') {{
+        hasChanges = false;
+    }}
 }})();
 if (window.location.search.includes('imported=1')) {{
     alert('Configuration imported successfully!');
