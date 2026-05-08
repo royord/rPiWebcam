@@ -335,7 +335,12 @@ def generate_config_page():
         </tr>
         <tr>
             <td>embed_timestamp:</td>
-            <td><input type="checkbox" name="embed_timestamp" value="true" " + ('checked' if _bool_val('embed_timestamp') else '') + "> True</td>
+            <td>
+                <select name="embed_timestamp">
+                    <option value="true" " + ('selected' if _bool_val('embed_timestamp') else '') + ">True</option>
+                    <option value="false" " + ('selected' if not _bool_val('embed_timestamp') else '') + ">False</option>
+                </select>
+            </td>
         </tr>
         <tr>
             <td>file_name:</td>
@@ -415,8 +420,13 @@ def generate_config_page():
             </td>
         </tr>
         <tr>
-            <td>camera_daylight_savings:</td>
-            <td><input type="checkbox" name="camera_daylight_savings" value="true" " + ('checked' if _bool_val('camera_daylight_savings') else '') + "> True</td>
+         <td>camera_daylight_savings:</td>
+            <td>
+                <select name="camera_daylight_savings">
+                    <option value="true" " + ('selected' if _bool_val('camera_daylight_savings') else '') + ">True</option>
+                    <option value="false" " + ('selected' if not _bool_val('camera_daylight_savings') else '') + ">False</option>
+                </select>
+            </td>
         </tr>
         <tr>
             <td>camera_port:</td>
@@ -476,13 +486,13 @@ def generate_config_page():
         'output_width': '{globals()['output_width']}',
         'output_height': '{globals()['output_height']}',
         'output_extension': '{globals()['output_extension']}',
-        'embed_timestamp': _bool_val('embed_timestamp') ? 'true' : '',
+        'embed_timestamp': _bool_val('embed_timestamp') ? 'true' : 'false',
         'file_name': '{globals()['file_name']}',
         'text_size': '{globals()['text_size']}',
         'text_color': '{globals()['text_color']}',
         'text_background': '{globals()['text_background']}',
         'camera_timezone': '{globals()['camera_timezone']}',
-        'camera_daylight_savings': _bool_val('camera_daylight_savings') ? 'true' : '',
+        'camera_daylight_savings': _bool_val('camera_daylight_savings') ? 'true' : 'false',
         'camera_port': '{globals()['camera_port']}',
         'camera_url': '{globals()['camera_url']}',
     }};
@@ -641,13 +651,6 @@ def save_config_route():
     # except Exception as e:
     #     print(e)
     #     return "Invalid rotation", 400
-
-    # Convert to mutable dict so we can add missing checkbox values
-    config_key_value = dict(config_key_value)
-    if 'embed_timestamp' not in config_key_value:
-        config_key_value['embed_timestamp'] = 'false'
-    if 'camera_daylight_savings' not in config_key_value:
-        config_key_value['camera_daylight_savings'] = 'false'
 
     error_text = """"""
     for key, value in config_key_value.items():
