@@ -400,10 +400,10 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
     <div class="field">
         <label for="rotation">Rotation</label>
         <select name="rotation" id="rotation">
-            <option value="0" {_opt(ROTATION, [0])}>0&deg;</option>
-            <option value="90" {_opt(ROTATION, [90])}>90&deg;</option>
-            <option value="180" {_opt(ROTATION, [180])}>180&deg;</option>
-            <option value="270" {_opt(ROTATION, [270])}>270&deg;</option>
+            <option value="0" {_opt(int(globals()['rotation']), [0])}>0&deg;</option>
+            <option value="90" {_opt(int(globals()['rotation']), [90])}>90&deg;</option>
+            <option value="180" {_opt(int(globals()['rotation']), [180])}>180&deg;</option>
+            <option value="270" {_opt(int(globals()['rotation']), [270])}>270&deg;</option>
         </select>
         <div class="hint">Requires server restart to apply.</div>
     </div>
@@ -810,7 +810,7 @@ function switchTab(e, tabId) {{
         'ftp-port': '{globals()['ftp-port']}',
         'ftp-username': '{globals()['ftp-username']}',
         'camera_name': '{globals()['camera_name']}',
-        'rotation': '{ROTATION}',
+        'rotation': '{globals()['rotation']}',
         'time_before_first_image': '{globals()['time_before_first_image']}',
         'time_before_image': '{globals()['time_before_image']}',
         'output_width': '{globals()['output_width']}',
@@ -1047,8 +1047,15 @@ def import_config():
         _cfg.read(CONFIG_FILE)
         if _cfg.has_section('camera'):
             for key, value in _cfg.items('camera'):
+                # Convert 'True'/'False' strings to booleans
+                if key in ('embed_timestamp', 'camera_daylight_savings'):
+                    if value == 'True':
+                        value = True
+                    elif value == 'False':
+                        value = False
                 globals()[key] = value
-        globals().update(dict(_cfg.items('camera')))
+        globals().update({k: v for k, v in _cfg.items('camera')
+                         if k not in ('embed_timestamp', 'camera_daylight_savings')})
         return redirect('/config.html?imported=1')
     except Exception as e:
         return f'Error importing config: {e}', 500
