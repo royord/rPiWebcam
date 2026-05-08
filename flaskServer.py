@@ -41,7 +41,7 @@ default_config = {
     'camera_name': 'camera_name',
     'rotation': '0',
     'time_before_image': '10',
-    'time_before_first_image': '0',
+    'time_before_first_image': '120',
     'output_width': None,
     'output_height': None,
     'output_extension': 'extension',
