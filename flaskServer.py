@@ -261,6 +261,7 @@ def generate_config_page():
 <h1>Camera Configuration</h1>
 
 <div style="margin-bottom:16px;">
+    <a href="/" style="display:inline-block; padding:8px 16px; background:#6c757d; color:#fff; text-decoration:none; border:none; border-radius:4px;">Back to Stream</a>
     <input type="button" id="topSaveBtn" value="Save Configuration" style="padding:8px 16px; background:#007bff; color:#fff; border:none; border-radius:4px; cursor:pointer;" onclick="document.getElementById('configForm').submit();">
     <a href="/export_config" style="display:inline-block; padding:8px 16px; background:#007bff; color:#fff; text-decoration:none; border-radius:4px;">Export Configuration</a>
     <button id="openImportBtn" style="padding:8px 16px; background:#28a745; color:#fff; border:none; border-radius:4px; cursor:pointer;">Import Configuration</button>
@@ -347,7 +348,10 @@ def generate_config_page():
             <td><input type="text" name="text_background" value="{globals()['text_background']}"></td>
         </tr>
         <tr>
-            <td>camera_timezone:</td>
+            <td>
+                <a href="#tzHelp">camera_timezone:</a>
+                <span id="tzHelp" style="font-size:0.85em; color:#666; margin-left:4px;">(IANA timezone, e.g. America/New_York)</span>
+            </td>
             <td><input type="text" name="camera_timezone" value="{globals()['camera_timezone']}"></td>
         </tr>
         <tr>
@@ -369,7 +373,6 @@ def generate_config_page():
         </tr>
     </table>
 </form>
-<p><a href="/">Back to Stream</a></p>
 
 <!-- Modal -->
 <div id="importModal" style="display:none; position:fixed; z-index:999; left:0; top:0; width:100%; height:100%; overflow:auto; background:rgba(0,0,0,0.5);">
