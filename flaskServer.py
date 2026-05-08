@@ -340,16 +340,16 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
 
 <!-- Tabs -->
 <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab(event, 'tab-camera')">Camera Settings</button>
+    <button class="tab-btn active" onclick="switchTab(event, 'tab-live')">Live View</button>
+    <button class="tab-btn" onclick="switchTab(event, 'tab-camera')">Camera Settings</button>
     <button class="tab-btn" onclick="switchTab(event, 'tab-transfer')">Transfer Settings</button>
-    <button class="tab-btn" onclick="switchTab(event, 'tab-live')">Live View</button>
     <button class="tab-btn" onclick="switchTab(event, 'tab-system')">System</button>
 </div>
 
 <form id="configForm" method="POST" action="/save_config">
 
-<!-- Tab 1: Camera Settings -->
-<div id="tab-camera" class="tab-content active">
+<!-- Tab 2: Camera Settings -->
+<div id="tab-camera" class="tab-content">
     <div class="field">
         <label for="camera_name">Camera Name</label>
         <input type="text" name="camera_name" id="camera_name" value="{globals()['camera_name']}" placeholder="e.g. front_porch">
