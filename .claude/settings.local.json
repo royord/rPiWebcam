@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod +x *)",
+      "Bash(python3 -m py_compile /mnt/c/Users/royord/GitProjects/rPiWebcam/flaskServer.py)",
+      "Bash(python3 -m py_compile flaskServer.py)",
+      "Bash(python3 *)"
+    ]
+  }
+}
