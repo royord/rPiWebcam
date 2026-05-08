@@ -86,7 +86,7 @@ def load_config():
         try:
             int(val)
         except (ValueError, TypeError):
-            defaults = {'camera_port': '8000', 'output_width': '0', 'output_height': '0', 'output_max_filesize_kb': '0', 'time_before_image': '10', 'time_before_first_image': '0'}
+            defaults = {'camera_port': '8000', 'output_width': '0', 'output_height': '0', 'output_max_filesize_kb': '0', 'time_before_image': '10', 'time_before_first_image': '120'}
             globals()[key] = defaults.get(key, '0')
 
 
