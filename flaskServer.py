@@ -13,6 +13,7 @@ import io
 import logging
 import configparser
 import os
+import shutil
 import time
 from threading import Condition, Thread, Event
 from flask import Flask, Response, redirect, request, render_template_string
@@ -51,7 +52,10 @@ default_config = {
     'output_folder':'image_dir',
     'embed_timestamp': 'embed_timestamp',
     'embed_camera_name': 'embed_camera_name',
+    'archive_retention_days': '30',
+    'reserved_space_gb': '5',
     '_bg_restart_event': None,
+    '_last_cleanup_time': 0,
     'file_name': 'file_name',
     'text_size': '18',
     'text_color': 'silver',
@@ -321,12 +325,24 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
 .field .hint {{ font-size: 12px; color: #888; margin-top: 4px; max-width: 400px; }}
 .section-title {{ font-size: 16px; font-weight: 600; color: #333; margin: 24px 0 16px; padding-bottom: 8px; border-bottom: 1px solid #eee; }}
 .section-title:first-child {{ margin-top: 0; }}
+.storage-gauge {{ margin: 16px 0; padding: 16px; background: #f8f9fa; border-radius: 8px; }}
+.storage-bar {{ height: 24px; border-radius: 12px; background: #e9ecef; overflow: hidden; position: relative; }}
+.storage-fill {{ height: 100%; border-radius: 12px; background: #4caf50; transition: width 0.5s, background 0.5s; min-width: 0; }}
+.storage-fill.warn {{ background: #ff9800; }}
+.storage-fill.crit {{ background: #f44336; }}
+.storage-labels {{ display: flex; justify-content: space-between; margin-top: 8px; font-size: 13px; color: #555; }}
+.storage-free, .storage-total {{ white-space: nowrap; }}
 .btn {{
     padding: 8px 20px; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; text-decoration: none;
     display: inline-block;
 }}
 .btn-primary {{ background: #007bff; color: #fff; }}
 .btn-success {{ background: #28a745; color: #fff; }}
+.btn-warning {{ background: #ffc107; color: #000; }}
+.btn-warning:hover {{ background: #e0a800; }}
+.cleanup-result {{ margin-top: 12px; padding: 10px 14px; border-radius: 6px; font-size: 13px; }}
+.cleanup-result.ok {{ background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }}
+.cleanup-result.error {{ background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }}
 .btn-secondary {{ background: #6c757d; color: #fff; text-decoration: none; }}
 .btn-group {{ margin-top: 20px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }}
 .stream-preview {{ background: #000; border-radius: 8px; overflow: hidden; }}
@@ -661,6 +677,38 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
         <input type="text" name="camera_url" id="camera_url" value="{globals()['camera_url']}" placeholder="e.g. http://camuser.dyndns.org:8000">
     </div>
 
+    <div class="section-title">Storage</div>
+
+    <div class="storage-gauge">
+        <div class="storage-bar">
+            <div id="storageFill" class="storage-fill" style="width:0%"></div>
+        </div>
+        <div class="storage-labels">
+            <span id="storageUsed">--</span> used
+            <span id="storageFree" class="storage-free">--</span> free
+            <span id="storageTotal" class="storage-total">of --</span>
+        </div>
+    </div>
+    <div style="text-align:center; font-size: 13px; color: #888; margin-top: 6px;">
+        <span id="archiveInfo">--</span>
+    </div>
+
+    <div class="field">
+        <label for="archive_retention_days">Image Retention (days)</label>
+        <input type="number" name="archive_retention_days" id="archive_retention_days" value="{globals()['archive_retention_days']}" min="1" max="3650">
+        <div class="hint">Images older than this are eligible for deletion during cleanup. Min 1 day, max 10 years.</div>
+    </div>
+
+    <div class="field">
+        <label for="reserved_space_gb">Reserved Free Space (GB)</label>
+        <input type="number" name="reserved_space_gb" id="reserved_space_gb" value="{globals()['reserved_space_gb']}" min="1" max="1000" step="0.5">
+        <div class="hint">Always keep this much free space on the drive. The system deletes oldest expired images first.</div>
+    </div>
+
+    <div class="btn-group">
+        <button type="button" class="btn btn-warning" id="cleanupBtn">Run Cleanup Now</button>
+    </div>
+    <div id="cleanupResult" class="cleanup-result" style="display:none"></div>
     <div class="section-title">Backup & Restore</div>
 
     <div class="btn-group">
@@ -821,6 +869,70 @@ function switchTab(e, tabId) {{
     window.onclick = function(e) {{ if (e.target === modal) modal.style.display = 'none'; }};
 }})();
 
+// Disk usage gauge (updates every 10 seconds)
+(function() {{
+    function updateStorage() {{
+        fetch('/disk_usage')
+            .then(function(r) {{ return r.json(); }})
+            .then(function(d) {{
+                var fill = document.getElementById('storageFill');
+                var usedEl = document.getElementById('storageUsed');
+                var freeEl = document.getElementById('storageFree');
+                var totalEl = document.getElementById('storageTotal');
+                if (!fill) return;
+                fill.style.width = d.percent + '%';
+                fill.className = 'storage-fill' + (d.percent >= 90 ? ' crit' : d.percent >= 70 ? ' warn' : '');
+                usedEl.textContent = d.used_gb.toFixed(1) + ' GB';
+                freeEl.textContent = d.free_gb.toFixed(1) + ' GB free';
+                totalEl.textContent = 'of ' + d.total_gb.toFixed(1) + ' GB';
+                // Update archive info if elements exist
+                var archiveEl = document.getElementById('archiveInfo');
+                if (archiveEl) {{
+                    archiveEl.textContent = d.total_images + ' images total, ' + d.archive_images + ' eligible for cleanup';
+                }}
+            }})
+            .catch(function() {{}});
+    }}
+    updateStorage();
+    setInterval(updateStorage, 10000);
+}})();
+
+// Cleanup button handler
+(function() {{
+    var cleanupBtn = document.getElementById('cleanupBtn');
+    var resultDiv = document.getElementById('cleanupResult');
+    if (cleanupBtn) {{
+        cleanupBtn.addEventListener('click', function() {{
+            cleanupBtn.disabled = true;
+            cleanupBtn.textContent = 'Cleaning up...';
+            if (resultDiv) {{
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'cleanup-result';
+                resultDiv.textContent = 'Running cleanup...';
+            }}
+            fetch('/cleanup_disk')
+                .then(function(r) {{ return r.json(); }})
+                .then(function(d) {{
+                    if (resultDiv) {{
+                        resultDiv.className = 'cleanup-result ok';
+                        var freedMB = (d.freed_bytes / (1024*1024)).toFixed(1);
+                        resultDiv.textContent = 'Cleaned up: ' + d.deleted + ' image(s) deleted, ' + freedMB + ' MB freed.';
+                    }}
+                }})
+                .catch(function(e) {{
+                    if (resultDiv) {{
+                        resultDiv.className = 'cleanup-result error';
+                        resultDiv.textContent = 'Error: ' + e.message;
+                    }}
+                }})
+                .finally(function() {{
+                    cleanupBtn.disabled = false;
+                    cleanupBtn.textContent = 'Run Cleanup Now';
+                }});
+        }});
+    }}
+}})();
+
 // Unsaved-changes guard
 (function() {{
     var originalValues = {{
@@ -837,6 +949,8 @@ function switchTab(e, tabId) {{
         'output_extension': '{globals()['output_extension']}',
         'embed_timestamp': _bool_val('embed_timestamp') ? 'true' : 'false',
         'embed_camera_name': _bool_val('embed_camera_name') ? 'true' : 'false',
+        'archive_retention_days': '{globals()['archive_retention_days']}',
+        'reserved_space_gb': '{globals()['reserved_space_gb']}',
         'file_name': '{globals()['file_name']}',
         'text_size': '{globals()['text_size']}',
         'text_color': '{globals()['text_color']}',
@@ -1091,6 +1205,12 @@ def save_config_route():
         elif key == "ftp-server":
             if is_transfer_tab and value in ('ftp_server', 'ftp_server2', 'camera_url', ''):
                 error_text += f"Invalid ftp-server: {value}. Please enter a valid server hostname or IP address.\n"
+        elif key == "archive_retention_days":
+            if not value.isnumeric() or int(value) < 1:
+                error_text += f"Invalid archive_retention_days: {value}. Must be a positive integer.\n"
+        elif key == "reserved_space_gb":
+            if not value.replace('.', '', 1).isnumeric() or float(value) < 0.5:
+                error_text += f"Invalid reserved_space_gb: {value}. Must be at least 0.5.\n"
 
     if len(error_text) > 0:
         return error_text, 400
@@ -1204,6 +1324,135 @@ def test_connection():
     return f'{{"status":"{status}","message":"{msg}"}}', 200 if ok else 400, {'Content-Type': 'application/json'}
 
 
+def _cleanup_images_throttled():
+    """Run cleanup only if more than 300s have passed since last check."""
+    last = globals().get('_last_cleanup_time', 0)
+    now = time.time()
+    if now - last < 300:
+        return
+    globals()['_last_cleanup_time'] = now
+    result = cleanup_images()
+    if result['deleted'] > 0:
+        print(f"Auto-cleanup: {result['deleted']} image(s) deleted, {result['freed_bytes']/(1024*1024):.1f} MB freed.")
+
+
+def cleanup_images():
+    """
+    Clean up image files in the output folder.
+    1. Hard limit: always keep at least 10% of the drive free
+    2. Respect the user's reserved_space_gb setting
+    3. Delete oldest files first
+    4. Never delete files newer than archive_retention_days
+    """
+    script_dir = os.path.dirname(__file__)
+    output_dir = os.path.join(script_dir, globals().get('output_folder', 'image_dir'))
+    if not os.path.isdir(output_dir):
+        return {'deleted': 0, 'freed_bytes': 0, 'reason': 'no output dir'}
+
+    retention_days = max(int(globals().get('archive_retention_days', '30')), 1)
+    reserved_gb = max(float(globals().get('reserved_space_gb', '5')), 1)
+
+    usage = shutil.disk_usage(output_dir)
+    total = usage.total
+    free = usage.free
+
+    # Hard limit: always keep 10% free
+    hard_limit_free = total * 0.10
+    # User setting: always keep at least reserved_gb free
+    effective_free_target = max(hard_limit_free, reserved_gb * (1024 ** 3))
+
+    if free >= effective_free_target:
+        return {'deleted': 0, 'freed_bytes': 0, 'reason': 'enough space'}
+
+    # We need to free up space. Calculate how much.
+    space_to_free = free - effective_free_target  # negative means we're over budget
+    if space_to_free >= 0:
+        return {'deleted': 0, 'freed_bytes': 0, 'reason': 'enough space'}
+
+    bytes_to_free = abs(space_to_free)
+
+    # Gather image files with their age and size
+    now = time.time()
+    retention_seconds = retention_days * 86400
+    eligible_files = []
+
+    for fname in os.listdir(output_dir):
+        fpath = os.path.join(output_dir, fname)
+        if not os.path.isfile(fpath):
+            continue
+        ext = os.path.splitext(fname)[1].lower()
+        if ext not in ('.jpg', '.jpeg', '.png'):
+            continue
+        try:
+            mtime = os.path.getmtime(fpath)
+            age = now - mtime
+            if age < retention_seconds:
+                continue  # Don't delete files within retention period
+            fsize = os.path.getsize(fpath)
+            eligible_files.append((fpath, fname, mtime, age, fsize))
+        except OSError:
+            continue
+
+    # Sort by age descending (oldest first)
+    eligible_files.sort(key=lambda x: x[3], reverse=True)
+
+    deleted = 0
+    freed = 0
+
+    for fpath, fname, mtime, age, fsize in eligible_files:
+        if freed >= bytes_to_free:
+            break
+        try:
+            os.remove(fpath)
+            deleted += 1
+            freed += fsize
+            print(f"Archive cleanup: deleted {fname} (age: {age/86400:.1f}d, size: {fsize/(1024*1024):.1f}MB)")
+        except OSError as ex:
+            print(f"Archive cleanup: failed to delete {fname}: {ex}")
+
+    return {'deleted': deleted, 'freed_bytes': freed, 'reason': 'cleanup triggered'}
+
+
+@app.route('/cleanup_disk')
+def cleanup_disk():
+    """Trigger disk cleanup and return results as JSON."""
+    result = cleanup_images()
+    return '{{"deleted":{d},"freed_bytes":{f},"reason":"{r}"}}'.format(
+        d=result['deleted'], f=result['freed_bytes'], r=result['reason']
+    ), 200, {'Content-Type': 'application/json'}
+
+
+@app.route('/disk_usage')
+def disk_usage():
+    """Return disk usage info for the output folder."""
+    script_dir = os.path.dirname(__file__)
+    output_dir = os.path.join(script_dir, globals().get('output_folder', 'image_dir'))
+    usage = shutil.disk_usage(output_dir)
+    used_gb = usage.used / (1024**3)
+    free_gb = usage.free / (1024**3)
+    total_gb = usage.total / (1024**3)
+    pct = (usage.used / usage.total * 100) if usage.total > 0 else 0
+
+    # Count total images and total archive size
+    total_images = 0
+    archive_images = 0
+    if os.path.isdir(output_dir):
+        now = time.time()
+        retention_days = max(int(globals().get('archive_retention_days', '30')), 1)
+        retention_seconds = retention_days * 86400
+        for fname in os.listdir(output_dir):
+            if os.path.splitext(fname)[1].lower() in ('.jpg', '.jpeg', '.png'):
+                total_images += 1
+                mtime = os.path.getmtime(os.path.join(output_dir, fname))
+                if now - mtime >= retention_seconds:
+                    archive_images += 1
+
+    return '{{"total_gb":{total_gb:.1f},"used_gb":{used_gb:.1f},"free_gb":{free_gb:.1f},"percent":{pct:.0f},"total_images":{total_images},"archive_images":{archive_images}}}'.format(
+        total_gb=total_gb, used_gb=used_gb, free_gb=free_gb, pct=pct,
+        total_images=total_images, archive_images=archive_images
+    ), 200, {'Content-Type': 'application/json'}
+
+
 def _bool_val(key):
     """Convert a config value to a checkbox-checked state."""
     return str(globals().get(key, '')).lower() == 'true'
@@ -1247,6 +1496,7 @@ def file_date_string():
 def capture_embedded_photo():
     """Capture a single high-quality JPEG still from the camera, with embedded text."""
     print("""Capture a single high-quality JPEG still from the camera, with embedded text.""")
+    _cleanup_images_throttled()
     script_dir = os.path.dirname(__file__)
     photo_buffer = BytesIO()
     picam2.capture_file(photo_buffer, name="main", format="jpeg")
