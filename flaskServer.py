@@ -729,8 +729,6 @@ def import_config():
 def _bool_val(key):
     """Convert a config value to a checkbox-checked state."""
     return str(globals().get(key, '')).lower() == 'true'
-    except Exception as e:
-        return f'Error importing config: {e}', 500
 
 
 def gen_frames():
