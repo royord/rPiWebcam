@@ -54,7 +54,7 @@ default_config = {
     'text_background': 'black',
     'camera_timezone': 'camera_timezone',
     'camera_daylight_savings': 'camera_daylight_savings',
-    'camera_port': '8000',
+    'camera_port': '80',
     'camera_url': 'camera_urls'
 }
 
@@ -912,6 +912,6 @@ if __name__ == '__main__':
     thread = Thread(target=background_capture_task, args=(int(globals()['time_before_image']),), daemon=True)
     thread.start()
     try:
-        app.run(host='0.0.0.0', port=8000, threaded=True, use_reloader=False)
+        app.run(host='0.0.0.0', port=int(globals()['camera_port']), threaded=True, use_reloader=False)
     finally:
         picam2.stop_recording()
