@@ -79,6 +79,16 @@ def load_config():
 
     globals().update(configs)
 
+    # Validate critical integer fields; default to safe values if corrupted
+    for key in ('camera_port', 'time_before_image', 'output_width', 'output_height', 'output_max_filesize_kb'):
+        val = globals().get(key)
+        try:
+            int(val)
+        except (ValueError, TypeError):
+            defaults = {'camera_port': '80', 'output_width': '0', 'output_height': '0', 'output_max_filesize_kb': '0', 'time_before_image': '10'}
+            globals()[key] = defaults.get(key, '0')
+
+
 def current_time():
     current_time = time.localtime()
     return current_time
