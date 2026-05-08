@@ -344,6 +344,16 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
 }}
 .modal h2 {{ margin-top: 0; }}
 .modal .close {{ position: absolute; top: 8px; right: 16px; font-size: 24px; cursor: pointer; color: #999; }}
+.toast {{
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #2d6a4e; color: #fff; padding: 12px 28px; border-radius: 6px;
+    font-size: 15px; font-weight: 500; opacity: 0; pointer-events: none;
+    transition: opacity .3s, transform .3s; z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,.25);
+}}
+.toast.show {{
+    opacity: 1; transform: translateX(-50%) translateY(0);
+}}
 @media (max-width: 900px) {{
     .two-pane {{ flex-direction: column; }}
     .live-pane {{ flex: none; width: 100%; position: static; }}
@@ -354,6 +364,7 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
 <h1>Camera Configuration</h1>
 
 <form id="configForm" method="POST" action="/save_config">
+    <input type="hidden" name="_active_tab" id="_active_tab" value="camera">
 
 <!-- Two-pane layout -->
 <div class="two-pane">
@@ -383,7 +394,10 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
 
 <!-- Right pane: Settings tabs -->
 <div class="settings-pane">
-    <div class="pane-label">Settings</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div class="pane-label">Settings</div>
+        <button type="submit" class="btn btn-primary">Save Configuration</button>
+    </div>
     <div class="tab-btns">
         <button type="button" class="tab-btn active" onclick="switchTab(event, 'tab-camera')">Camera Settings</button>
         <button type="button" class="tab-btn" onclick="switchTab(event, 'tab-transfer')">Transfer Settings</button>
@@ -652,12 +666,6 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
 </div>
 </div>
 
-<!-- Save bar at bottom -->
-<div class="btn-group" style="position:sticky; bottom:0; background:#f5f5f5; padding:16px 0; margin-top:40px; border-top:1px solid #dee2e6;">
-    <button type="submit" class="btn btn-primary">Save Configuration</button>
-    <a href="/" class="btn btn-secondary">Back to Stream</a>
-</div>
-
 </form>
 
 <!-- Import Modal -->
@@ -685,7 +693,80 @@ function switchTab(e, tabId) {{
     e.currentTarget.closest('.settings-pane').querySelectorAll('.tab-btn').forEach(function(b) {{ b.classList.remove('active'); }});
     document.getElementById(tabId).classList.add('active');
     e.currentTarget.classList.add('active');
+    // Persist active tab for form submission and localStorage
+    var name = tabId.replace('tab-', '');
+    try {{ document.getElementById('_active_tab').value = name; localStorage.setItem('configActiveTab', name); }} catch(e) {{}}
 }}
+
+// Restore tab and show toast on load
+(function() {{
+    var params = new URLSearchParams(window.location.search);
+    var saved = params.get('saved');
+    var tabParam = params.get('tab');
+
+    // Show toast for save/import
+    if (saved === '1') {{
+        var toast = document.createElement('div');
+        toast.id = 'saveToast';
+        toast.className = 'toast';
+        toast.textContent = 'Configuration saved!';
+        document.body.appendChild(toast);
+        requestAnimationFrame(function() {{ toast.classList.add('show'); }});
+        setTimeout(function() {{
+            toast.classList.remove('show');
+            setTimeout(function() {{ toast.remove(); }}, 400);
+        }}, 5000);
+        // Clear the saved param so toast doesn't reappear on accidental refresh
+        var url = new URL(window.location);
+        url.searchParams.delete('saved');
+        if (url.searchParams.get('tab')) url.searchParams.delete('tab');
+        window.history.replaceState({{}}, '', url);
+    }}
+    if (params.get('imported') === '1') {{
+        var toast = document.createElement('div');
+        toast.id = 'saveToast';
+        toast.className = 'toast';
+        toast.textContent = 'Configuration imported successfully!';
+        document.body.appendChild(toast);
+        requestAnimationFrame(function() {{ toast.classList.add('show'); }});
+        setTimeout(function() {{
+            toast.classList.remove('show');
+            setTimeout(function() {{ toast.remove(); }}, 400);
+        }}, 5000);
+        var url = new URL(window.location);
+        url.searchParams.delete('imported');
+        if (url.searchParams.get('tab')) url.searchParams.delete('tab');
+        window.history.replaceState({{}}, '', url);
+    }}
+
+    // Restore active tab: URL param > localStorage > default 'camera'
+    var activeTab = null;
+    if (tabParam) activeTab = tabParam;
+    else {{
+        try {{ activeTab = localStorage.getItem('configActiveTab'); }} catch(e) {{}}
+    }}
+    if (!activeTab) activeTab = 'camera';
+
+    // Always sync hidden field
+    try {{ document.getElementById('_active_tab').value = activeTab; }} catch(e) {{}}
+
+    if (activeTab !== 'camera') {{
+        var btns = document.querySelector('.settings-pane').querySelectorAll('.tab-btn');
+        var contents = document.querySelector('.settings-pane').querySelectorAll('.tab-content');
+        btns.forEach(function(b) {{ b.classList.remove('active'); }});
+        contents.forEach(function(t) {{ t.classList.remove('active'); }});
+        var target = document.getElementById('tab-' + activeTab);
+        if (target) {{
+            target.classList.add('active');
+            for (var i = 0; i < btns.length; i++) {{
+                if (btns[i].getAttribute('onclick') && btns[i].getAttribute('onclick').indexOf("'tab-" + activeTab + "')") > -1) {{
+                    btns[i].classList.add('active');
+                    break;
+                }}
+            }}
+        }}
+    }}
+}})();
 
 // Import modal
 (function() {{
@@ -739,12 +820,6 @@ function switchTab(e, tabId) {{
     }}
 }})();
 
-// Alert on success
-(function() {{
-    var params = new URLSearchParams(window.location.search);
-    if (params.get('imported') === '1') {{ alert('Configuration imported successfully!'); }}
-    else if (params.get('saved') === '1') {{ alert('Configuration saved!'); }}
-}})();
 </script>
 </body>
 </html>
@@ -916,7 +991,8 @@ def save_config_route():
         if new_port != old_port:
             print(f"Port changed from {old_port} to {new_port} — restarting server...")
             os.execv(sys.executable, [sys.executable] + sys.argv + ['--restart-port', new_port])
-        return redirect('/config.html?saved=1')
+        tab = config_key_value.get('_active_tab', 'camera')
+        return redirect(f'/config.html?saved=1&tab={tab}')
 
     # print(config_key_value)
     # for key, value in config_key_value.items():
