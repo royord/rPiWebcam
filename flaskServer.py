@@ -14,7 +14,7 @@ import logging
 import configparser
 import os
 import time
-from threading import Condition, Thread
+from threading import Condition, Thread, Event
 from flask import Flask, Response, redirect, request, render_template_string
 from io import BytesIO
 from flask import send_file
@@ -50,6 +50,8 @@ default_config = {
     'output_max_filesize_kb':0,
     'output_folder':'image_dir',
     'embed_timestamp': 'embed_timestamp',
+    'embed_camera_name': 'embed_camera_name',
+    '_bg_restart_event': None,
     'file_name': 'file_name',
     'text_size': '18',
     'text_color': 'silver',
@@ -70,7 +72,7 @@ def load_config():
         if config.has_section('camera') and config.has_option('camera', 'rotation'):
             for key, value in config.items('camera'):
                 # Convert 'true'/'false' strings to actual booleans for checkbox fields
-                if key in ('embed_timestamp', 'camera_daylight_savings'):
+                if key in ('embed_timestamp', 'embed_camera_name', 'camera_daylight_savings'):
                     if value.lower() == 'true':
                         value = True
                     elif value.lower() == 'false':
@@ -117,7 +119,7 @@ def save_config(rotation):
     try:
         for key, value in rotation.items():
             # Convert 'true'/'false' strings to actual booleans for checkbox fields
-            if key in ('embed_timestamp', 'camera_daylight_savings'):
+            if key in ('embed_timestamp', 'embed_camera_name', 'camera_daylight_savings'):
                 if value == 'true':
                     value = True
                 elif value == 'false':
@@ -449,6 +451,14 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
             <option value="jpg" {_opt(globals()['output_extension'], ['jpg'])}>JPEG (.jpg)</option>
             <option value="jpeg" {_opt(globals()['output_extension'], ['jpeg'])}>JPEG (.jpeg)</option>
             <option value="png" {_opt(globals()['output_extension'], ['png'])}>PNG (.png)</option>
+        </select>
+    </div>
+
+    <div class="field">
+        <label for="embed_camera_name">Embed Camera Name</label>
+        <select name="embed_camera_name">
+            <option value="true" {_opt(_bool_val('embed_camera_name'), [True])}>True</option>
+            <option value="false" {_opt(_bool_val('embed_camera_name'), [False])}>False</option>
         </select>
     </div>
 
@@ -826,6 +836,7 @@ function switchTab(e, tabId) {{
         'output_height': '{globals()['output_height']}',
         'output_extension': '{globals()['output_extension']}',
         'embed_timestamp': _bool_val('embed_timestamp') ? 'true' : 'false',
+        'embed_camera_name': _bool_val('embed_camera_name') ? 'true' : 'false',
         'file_name': '{globals()['file_name']}',
         'text_size': '{globals()['text_size']}',
         'text_color': '{globals()['text_color']}',
@@ -1040,6 +1051,14 @@ def save_config_route():
     new_port = config_key_value.get('camera_port', old_port)
     old_rotation = int(globals().get('rotation', '0'))
     new_rotation_str = config_key_value.get('rotation', str(old_rotation))
+    old_first_image_delay = globals().get('time_before_first_image', '0')
+    new_first_image_delay = config_key_value.get('time_before_first_image', old_first_image_delay)
+    old_image_delay = globals().get('time_before_image', '10')
+    new_image_delay = config_key_value.get('time_before_image', old_image_delay)
+
+    # Only validate transfer fields if the transfer tab is being saved
+    active_tab = config_key_value.get('_active_tab', 'camera')
+    is_transfer_tab = active_tab == 'transfer'
 
     error_text = """"""
     for key, value in config_key_value.items():
@@ -1069,11 +1088,24 @@ def save_config_route():
         elif key == "camera_port":
             if not value.isnumeric() or not 1 <= int(value) <= 65535:
                 error_text += f"Invalid camera_port: {value}\n"
+        elif key == "ftp-server":
+            if is_transfer_tab and value in ('ftp_server', 'ftp_server2', 'camera_url', ''):
+                error_text += f"Invalid ftp-server: {value}. Please enter a valid server hostname or IP address.\n"
 
     if len(error_text) > 0:
         return error_text, 400
     else:
         save_config(config_key_value)
+        if old_first_image_delay != new_first_image_delay:
+            print(f"time_before_first_image changed from {old_first_image_delay} to {new_first_image_delay} — signaling background capture to restart timer...")
+            restart = globals().get('_bg_restart_event')
+            if restart is not None:
+                restart.set()
+        if old_image_delay != new_image_delay:
+            print(f"time_before_image changed from {old_image_delay} to {new_image_delay} — signaling background capture...")
+            restart = globals().get('_bg_restart_event')
+            if restart is not None:
+                restart.set()
         if int(new_rotation_str) != old_rotation:
             reconfigure_camera()
         if new_port != old_port:
@@ -1112,14 +1144,14 @@ def import_config():
         if _cfg.has_section('camera'):
             for key, value in _cfg.items('camera'):
                 # Convert 'True'/'False' strings to booleans
-                if key in ('embed_timestamp', 'camera_daylight_savings'):
+                if key in ('embed_timestamp', 'embed_camera_name', 'camera_daylight_savings'):
                     if value == 'True':
                         value = True
                     elif value == 'False':
                         value = False
                 globals()[key] = value
         globals().update({k: v for k, v in _cfg.items('camera')
-                         if k not in ('embed_timestamp', 'camera_daylight_savings')})
+                         if k not in ('embed_timestamp', 'embed_camera_name', 'camera_daylight_savings')})
         return redirect('/config.html?imported=1')
     except Exception as e:
         return f'Error importing config: {e}', 500
@@ -1261,10 +1293,17 @@ def capture_embedded_photo():
     return Response(output_buffer.getvalue(), mimetype='image/jpeg')
 
 def background_capture_task(delay):
+    restart_event = globals().get('_bg_restart_event')
     first = True
     while True:
         try:
+            # If delay > 0, apply the configured delay
             if delay > 0:
+                # Check for restart signal (time_before_first_image changed)
+                if restart_event is not None and first and restart_event.is_set():
+                    restart_event.clear()
+                    print(f"Background capture: restarting timer (new time_before_first_image)...")
+
                 # Use time_before_first_image on the first capture, then time_before_image
                 if first:
                     wait = int(globals().get('time_before_first_image', '0'))
@@ -1272,6 +1311,14 @@ def background_capture_task(delay):
                         print(f"Waiting {wait}s before first capture...")
                         total = 0
                         while total < wait:
+                            if restart_event is not None and restart_event.is_set():
+                                print("Background capture: config changed, restarting wait...")
+                                restart_event.clear()
+                                total = 0
+                                wait = int(globals().get('time_before_first_image', '0'))
+                                if wait > 0:
+                                    print(f"Restarted: waiting {wait}s before first capture...")
+                                continue
                             time.sleep(1)
                             total += 1
                             if total % 10 == 0:
@@ -1279,12 +1326,18 @@ def background_capture_task(delay):
                     first = False
                 else:
                     total_delayed = 0
-                    print(f"Background thread sleeping for {delay} seconds...")
                     while total_delayed < delay:
+                        if restart_event is not None and restart_event.is_set():
+                            print("Background capture: config changed, restarting...")
+                            restart_event.clear()
+                            total_delayed = 0
+                            first = True
+                            delay = int(globals().get('time_before_image', '10'))
+                            continue
                         time.sleep(1)
                         total_delayed += 1
                         if total_delayed % 10 == 0:
-                            print(f"Background thread sleeping for {delay} seconds... {total_delayed} seconds elapsed.")
+                            print(f"Background thread sleeping for {total_delayed} seconds...")
             capture_embedded_photo()
         except Exception as ex:
             print("Error in background thread.")
@@ -1299,13 +1352,16 @@ def create_embed_text():
     Enhance with the path that the file should be saved to so that images aren't in the
     root folder.
     """
-    camera_name = globals()['camera_name']
     script_dir = os.path.dirname(__file__)
+    camera_name = globals()['camera_name'] if globals().get('embed_camera_name') is True else ''
     if globals().get('embed_timestamp') is True:
-        camera_name = globals()['camera_name'] + ' - ' + cam_time()
+        camera_name = camera_name + (' - ' if camera_name else '') + cam_time()
+    unicode_text = camera_name
+    if not unicode_text:
+        # Return an empty canvas if nothing to draw
+        return Image.new('RGB', (1, 1), 'transparent')
 
     # sample text and font
-    unicode_text = camera_name
     # font_path = f'{self.script_dir}/fonts/AmazeFont.otf'
     font_path = f'{script_dir}/fonts/AmazeFont.otf'
 
@@ -1373,6 +1429,7 @@ if __name__ == '__main__':
     print("Capture: Button on index page saves/displays latest photo")
     print("Config: Set rotation at /config.html (applies immediately)")
 
+    globals()['_bg_restart_event'] = Event()
     thread = Thread(target=background_capture_task, args=(int(globals()['time_before_image']),), daemon=True)
     thread.start()
     try:
