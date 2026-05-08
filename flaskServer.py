@@ -325,11 +325,17 @@ def generate_config_page():
         </tr>
         <tr>
             <td>output_extension:</td>
-            <td><input type="text" name="output_extension" value="{globals()['output_extension']}"></td>
+            <td>
+                <select name="output_extension">
+                    <option value="jpg" " + ('selected' if globals()['output_extension'] == 'jpg' else '') + ">jpg</option>
+                    <option value="jpeg" " + ('selected' if globals()['output_extension'] == 'jpeg' else '') + ">jpeg</option>
+                    <option value="png" " + ('selected' if globals()['output_extension'] == 'png' else '') + ">png</option>
+                </select>
+            </td>
         </tr>
         <tr>
             <td>embed_timestamp:</td>
-            <td><input type="text" name="embed_timestamp" value="{globals()['embed_timestamp']}"></td>
+            <td><input type="checkbox" name="embed_timestamp" value="true" " + ('checked' if _bool_val('embed_timestamp') else '') + "> True</td>
         </tr>
         <tr>
             <td>file_name:</td>
@@ -410,7 +416,7 @@ def generate_config_page():
         </tr>
         <tr>
             <td>camera_daylight_savings:</td>
-            <td><input type="text" name="camera_daylight_savings" value="{globals()['camera_daylight_savings']}"></td>
+            <td><input type="checkbox" name="camera_daylight_savings" value="true" " + ('checked' if _bool_val('camera_daylight_savings') else '') + "> True</td>
         </tr>
         <tr>
             <td>camera_port:</td>
@@ -595,6 +601,13 @@ def save_config_route():
     #     print(e)
     #     return "Invalid rotation", 400
 
+    # Convert to mutable dict so we can add missing checkbox values
+    config_key_value = dict(config_key_value)
+    if 'embed_timestamp' not in config_key_value:
+        config_key_value['embed_timestamp'] = 'false'
+    if 'camera_daylight_savings' not in config_key_value:
+        config_key_value['camera_daylight_savings'] = 'false'
+
     error_text = """"""
     for key, value in config_key_value.items():
         if key == "rotation":
@@ -668,6 +681,13 @@ def import_config():
                 globals()[key] = value
         globals().update(dict(_cfg.items('camera')))
         return redirect('/config.html?imported=1')
+    except Exception as e:
+        return f'Error importing config: {e}', 500
+
+
+def _bool_val(key):
+    """Convert a config value to a checkbox-checked state."""
+    return str(globals().get(key, '')).lower() == 'true'
     except Exception as e:
         return f'Error importing config: {e}', 500
 
