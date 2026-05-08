@@ -705,7 +705,16 @@ function switchTab(e, tabId) {{
                 body: fd
             }}).then(function(r) {{
                 if (r.status === 200) {{
-                    // Reload page to re-read config file with saved values
+                    // Show toast, then reload to refresh all values
+                    var toast = document.createElement('div');
+                    toast.className = 'toast';
+                    toast.textContent = 'Configuration saved!';
+                    document.body.appendChild(toast);
+                    requestAnimationFrame(function() {{ toast.classList.add('show'); }});
+                    setTimeout(function() {{
+                        toast.classList.remove('show');
+                        setTimeout(function() {{ toast.remove(); }}, 400);
+                    }}, 2000);
                     window.location.reload();
                 }} else {{
                     return r.text().then(function(t) {{ alert('Save failed: ' + t); }}, function() {{ alert('Save failed'); }});
