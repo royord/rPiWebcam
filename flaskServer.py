@@ -108,44 +108,31 @@ def save_config(rotation):
     """Save rotation to config file."""
     config = configparser.ConfigParser()
     configs = {}
-    print("Save config: ", rotation)
+    print("Save config START")
     # config['camera'] = {'rotation': str(rotation)}
     try:
         for key, value in rotation.items():
-            # print(key, value)
             # Convert 'true'/'false' strings to actual booleans for checkbox fields
             if key in ('embed_timestamp', 'camera_daylight_savings'):
                 if value == 'true':
                     value = True
                 elif value == 'false':
                     value = False
-            try:
-                configs[key] = value
-            except Exception as e:
-                print("Error updating configs:")
-                print(e)
-            # try:
-            #     config[key] = value
-            # except Exception as e:
-            #     print("Error updating config:")
-            #     print(e)
-            # print("Save config: ", key, " = ", value)
+            configs[key] = value
             globals()[key] = value
+            print(f"  {key} = {value!r} (type {type(value).__name__})")
         globals().update(configs)
-        config['camera'] = configs # this will actually write the config out
+        config['camera'] = configs
         with open(CONFIG_FILE, 'w') as f:
             config.write(f)
-
-        # for key, value in globals().items():
-        #     if key in default_config.keys():
-        #         print(key, "::", value)
+        print("  Written to file successfully")
     except Exception as e:
-        print("Error saving config")
-        print(e)
+        print(f"Error saving config: {e}")
+        import traceback
+        traceback.print_exc()
 
-    print("trying to load config again:")
-    # load_config()
-    print("trying to load config again END")
+    print(f"  rotation in globals now: {globals().get('rotation', 'NOT SET')!r}")
+    print("Save config END")
 
     # print("--==GLOBALS==--")
     # for key, value in globals().items():
@@ -1020,9 +1007,12 @@ def save_config_route():
                 error_text += f"Invalid camera_port: {value}\n"
 
     if len(error_text) > 0:
+        print(f"Validation failed: {error_text}")
         return error_text, 400
     else:
+        print(f"Validation passed, saving. Rotation = {config_key_value.get('rotation')!r}")
         save_config(config_key_value)
+        print(f"After save, globals rotation = {globals().get('rotation', 'NOT SET')!r}")
         if new_port != old_port:
             print(f"Port changed from {old_port} to {new_port} — restarting server...")
             os.execv(sys.executable, [sys.executable] + sys.argv + ['--restart-port', new_port])
