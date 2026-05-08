@@ -108,8 +108,6 @@ def save_config(rotation):
     """Save rotation to config file."""
     config = configparser.ConfigParser()
     configs = {}
-    print("Save config START")
-    # config['camera'] = {'rotation': str(rotation)}
     try:
         for key, value in rotation.items():
             # Convert 'true'/'false' strings to actual booleans for checkbox fields
@@ -120,19 +118,14 @@ def save_config(rotation):
                     value = False
             configs[key] = value
             globals()[key] = value
-            print(f"  {key} = {value!r} (type {type(value).__name__})")
         globals().update(configs)
         config['camera'] = configs
         with open(CONFIG_FILE, 'w') as f:
             config.write(f)
-        print("  Written to file successfully")
     except Exception as e:
         print(f"Error saving config: {e}")
         import traceback
         traceback.print_exc()
-
-    print(f"  rotation in globals now: {globals().get('rotation', 'NOT SET')!r}")
-    print("Save config END")
 
     # print("--==GLOBALS==--")
     # for key, value in globals().items():
@@ -1016,27 +1009,13 @@ def save_config_route():
                 error_text += f"Invalid camera_port: {value}\n"
 
     if len(error_text) > 0:
-        print(f"Validation failed: {error_text}")
         return error_text, 400
     else:
-        print(f"Validation passed, saving. Rotation = {config_key_value.get('rotation')!r}")
         save_config(config_key_value)
-        print(f"After save, globals rotation = {globals().get('rotation', 'NOT SET')!r}")
         if new_port != old_port:
             print(f"Port changed from {old_port} to {new_port} — restarting server...")
             os.execv(sys.executable, [sys.executable] + sys.argv + ['--restart-port', new_port])
         return '', 200
-
-    # print(config_key_value)
-    # for key, value in config_key_value.items():
-    #     print(key, value)
-    # exit(0)
-    # if rotation in (0, 90, 180, 270):
-    #     save_config(rotation)
-    #     return redirect('/config.html?saved=1')
-    # else:
-    #     return "Invalid rotation", 400
-    return config_key_value
 
 
 @app.route('/export_config')
