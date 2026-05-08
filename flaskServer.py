@@ -1016,8 +1016,7 @@ def save_config_route():
         if new_port != old_port:
             print(f"Port changed from {old_port} to {new_port} — restarting server...")
             os.execv(sys.executable, [sys.executable] + sys.argv + ['--restart-port', new_port])
-        tab = config_key_value.get('_active_tab', 'camera')
-        return redirect(f'/config.html?saved=1&tab={tab}')
+        return '', 200
 
     # print(config_key_value)
     # for key, value in config_key_value.items():
