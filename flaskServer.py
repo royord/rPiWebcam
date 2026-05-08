@@ -348,11 +348,65 @@ def generate_config_page():
             <td><input type="text" name="text_background" value="{globals()['text_background']}"></td>
         </tr>
         <tr>
+            <td>camera_timezone:</td>
             <td>
-                <a href="#tzHelp">camera_timezone:</a>
-                <span id="tzHelp" style="font-size:0.85em; color:#666; margin-left:4px;">(IANA timezone, e.g. America/New_York)</span>
+                <input list="timezones" name="camera_timezone" value="{globals()['camera_timezone']}" placeholder="e.g. America/New_York">
+                <datalist id="timezones">
+                    <option value="America/New_York">
+                    <option value="America/Chicago">
+                    <option value="America/Denver">
+                    <option value="America/Los_Angeles">
+                    <option value="America/Anchorage">
+                    <option value="Pacific/Honolulu">
+                    <option value="America/Phoenix">
+                    <option value="America/Toronto">
+                    <option value="America/Vancouver">
+                    <option value="America/Regina">
+                    <option value="America/Mexico_City">
+                    <option value="America/Bogota">
+                    <option value="America/Lima">
+                    <option value="America/Sao_Paulo">
+                    <option value="America/Argentina/Buenos_Aires">
+                    <option value="America/Santiago">
+                    <option value="Europe/London">
+                    <option value="Europe/Dublin">
+                    <option value="Europe/Lisbon">
+                    <option value="Europe/Paris">
+                    <option value="Europe/Berlin">
+                    <option value="Europe/Rome">
+                    <option value="Europe/Madrid">
+                    <option value="Europe/Amsterdam">
+                    <option value="Europe/Brussels">
+                    <option value="Europe/Vienna">
+                    <option value="Europe/Zurich">
+                    <option value="Europe/Prague">
+                    <option value="Europe/Warsaw">
+                    <option value="Europe/Stockholm">
+                    <option value="Europe/Copenhagen">
+                    <option value="Europe/Oslo">
+                    <option value="Europe/Helsinki">
+                    <option value="Europe/Athens">
+                    <option value="Europe/Istanbul">
+                    <option value="Europe/Moscow">
+                    <option value="Asia/Dubai">
+                    <option value="Asia/Kolkata">
+                    <option value="Asia/Shanghai">
+                    <option value="Asia/Hong_Kong">
+                    <option value="Asia/Singapore">
+                    <option value="Asia/Tokyo">
+                    <option value="Asia/Seoul">
+                    <option value="Asia/Taipei">
+                    <option value="Asia/Bangkok">
+                    <option value="Asia/Jakarta">
+                    <option value="Asia/Manila">
+                    <option value="Australia/Sydney">
+                    <option value="Australia/Melbourne">
+                    <option value="Australia/Brisbane">
+                    <option value="Australia/Perth">
+                    <option value="Pacific/Auckland">
+                    <option value="Pacific/Fiji">
+                </datalist>
             </td>
-            <td><input type="text" name="camera_timezone" value="{globals()['camera_timezone']}"></td>
         </tr>
         <tr>
             <td>camera_daylight_savings:</td>
