@@ -290,14 +290,25 @@ def generate_config_page():
 <style>
 body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}
 h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
-.tabs {{ display: flex; gap: 0; border-bottom: 2px solid #dee2e6; background: #fff; }}
+.two-pane {{ display: flex; gap: 20px; align-items: flex-start; }}
+.live-pane {{
+    flex: 0 0 640px; position: sticky; top: 20px;
+}}
+.settings-pane {{
+    flex: 1; min-width: 0;
+}}
+.pane-label {{
+    font-size: 13px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}}
+.tab-btns {{ display: flex; gap: 0; border-bottom: 2px solid #dee2e6; background: #fff; margin-bottom: 20px; }}
 .tab-btn {{
     padding: 10px 24px; border: none; background: none; font-size: 15px; cursor: pointer;
     color: #666; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all .15s;
 }}
 .tab-btn:hover {{ color: #007bff; }}
 .tab-btn.active {{ color: #007bff; border-bottom-color: #007bff; font-weight: 500; }}
-.tab-content {{ display: none; padding: 24px 0; }}
+.tab-content {{ display: none; }}
 .tab-content.active {{ display: block; }}
 .field {{ margin-bottom: 16px; }}
 .field label {{ display: block; font-size: 13px; font-weight: 500; color: #555; margin-bottom: 4px; }}
@@ -321,7 +332,7 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
 .btn-success {{ background: #28a745; color: #fff; }}
 .btn-secondary {{ background: #6c757d; color: #fff; text-decoration: none; }}
 .btn-group {{ margin-top: 20px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }}
-.stream-preview {{ background: #000; border-radius: 8px; overflow: hidden; max-width: 640px; margin-bottom: 16px; }}
+.stream-preview {{ background: #000; border-radius: 8px; overflow: hidden; }}
 .stream-preview img {{ width: 100%; display: block; }}
 .modal-overlay {{
     display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%;
@@ -333,23 +344,53 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
 }}
 .modal h2 {{ margin-top: 0; }}
 .modal .close {{ position: absolute; top: 8px; right: 16px; font-size: 24px; cursor: pointer; color: #999; }}
+@media (max-width: 900px) {{
+    .two-pane {{ flex-direction: column; }}
+    .live-pane {{ flex: none; width: 100%; position: static; }}
+}}
 </style>
 </head>
 <body>
 <h1>Camera Configuration</h1>
 
-<!-- Tabs -->
-<div class="tabs">
-    <button class="tab-btn active" onclick="switchTab(event, 'tab-live')">Live View</button>
-    <button class="tab-btn" onclick="switchTab(event, 'tab-camera')">Camera Settings</button>
-    <button class="tab-btn" onclick="switchTab(event, 'tab-transfer')">Transfer Settings</button>
-    <button class="tab-btn" onclick="switchTab(event, 'tab-system')">System</button>
-</div>
-
 <form id="configForm" method="POST" action="/save_config">
 
+<!-- Two-pane layout -->
+<div class="two-pane">
+
+<!-- Left pane: Live View (always visible) -->
+<div class="live-pane">
+    <div class="pane-label">Live View</div>
+    <div class="stream-preview">
+        <img src="/stream.mjpg" />
+    </div>
+    <div class="btn-group">
+        <button type="button" class="btn btn-primary" onclick="capturePhoto('/capture.jpg')">Capture Photo</button>
+        <button type="button" class="btn btn-primary" onclick="capturePhoto('/capture_embedded.jpg')">Capture with Text</button>
+        <a href="/full.html" class="btn btn-secondary">Fullscreen View</a>
+    </div>
+    <div id="livePhoto" style="display:none; margin-top:16px;">
+        <img id="livePhotoImg" style="max-width:100%; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,.15);">
+    </div>
+    <script>
+    function capturePhoto(url) {{
+        var img = document.getElementById('livePhotoImg');
+        img.src = url + '?' + Date.now();
+        document.getElementById('livePhoto').style.display = 'block';
+    }}
+    </script>
+</div>
+
+<!-- Right pane: Settings tabs -->
+<div class="settings-pane">
+    <div class="pane-label">Settings</div>
+    <div class="tab-btns">
+        <button class="tab-btn active" onclick="switchTab(event, 'tab-camera')">Camera Settings</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-transfer')">Transfer Settings</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-system')">System</button>
+    </div>
 <!-- Tab 2: Camera Settings -->
-<div id="tab-camera" class="tab-content">
+<div id="tab-camera" class="tab-content active">
     <div class="field">
         <label for="camera_name">Camera Name</label>
         <input type="text" name="camera_name" id="camera_name" value="{globals()['camera_name']}" placeholder="e.g. front_porch">
@@ -516,29 +557,6 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
     </script>
 </div>
 
-<!-- Tab 3: Live View -->
-<div id="tab-live" class="tab-content active">
-    <div class="section-title">Live Preview</div>
-    <div class="stream-preview">
-        <img src="/stream.mjpg" />
-    </div>
-    <div class="btn-group">
-        <button type="button" class="btn btn-primary" onclick="capturePhoto('/capture.jpg')">Capture Photo</button>
-        <button type="button" class="btn btn-primary" onclick="capturePhoto('/capture_embedded.jpg')">Capture with Text</button>
-        <a href="/full.html" class="btn btn-secondary">Fullscreen View</a>
-    </div>
-    <div id="livePhoto" style="display:none; margin-top:16px;">
-        <img id="livePhotoImg" style="max-width:100%; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,.15);">
-    </div>
-    <script>
-    function capturePhoto(url) {{
-        var img = document.getElementById('livePhotoImg');
-        img.src = url + '?' + Date.now();
-        document.getElementById('livePhoto').style.display = 'block';
-    }}
-    </script>
-</div>
-
 <!-- Tab 4: System -->
 <div id="tab-system" class="tab-content">
     <div class="section-title">Time & Date</div>
@@ -631,6 +649,8 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
         <button type="button" class="btn btn-primary" id="openImportBtn">Import Configuration</button>
     </div>
 </div>
+</div>
+</div>
 
 <!-- Save bar at bottom -->
 <div class="btn-group" style="position:sticky; bottom:0; background:#f5f5f5; padding:16px 0; margin-top:40px; border-top:1px solid #dee2e6;">
@@ -659,10 +679,10 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
 </div>
 
 <script>
-// Tab switching
+// Tab switching (right pane only)
 function switchTab(e, tabId) {{
-    document.querySelectorAll('.tab-content').forEach(function(t) {{ t.classList.remove('active'); }});
-    document.querySelectorAll('.tab-btn').forEach(function(b) {{ b.classList.remove('active'); }});
+    e.currentTarget.closest('.settings-pane').querySelectorAll('.tab-content').forEach(function(t) {{ t.classList.remove('active'); }});
+    e.currentTarget.closest('.settings-pane').querySelectorAll('.tab-btn').forEach(function(b) {{ b.classList.remove('active'); }});
     document.getElementById(tabId).classList.add('active');
     e.currentTarget.classList.add('active');
 }}
