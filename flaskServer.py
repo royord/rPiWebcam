@@ -184,6 +184,9 @@ elif ROTATION == 270:
 else:
     raise ValueError("Unsupported rotation; use 0, 90, 180, or 270")
 
+# Module-level camera instance (initialised in __main__ block)
+picam2 = None
+
 PAGE = f"""\
 <html>
 <head>
@@ -405,7 +408,7 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
             <option value="180" {_opt(int(globals()['rotation']), [180])}>180&deg;</option>
             <option value="270" {_opt(int(globals()['rotation']), [270])}>270&deg;</option>
         </select>
-        <div class="hint">Requires server restart to apply.</div>
+        <div class="hint">Applies immediately.</div>
     </div>
 
     <div class="field">
@@ -936,6 +939,57 @@ def update_rtc_time():
         loop_time_set -= 1
     return
 
+def reconfigure_camera():
+    """Reconfigure the camera with the current ROTATION setting.
+
+    Called from /save_config when rotation changes. Stops recording,
+    recomputes WIDTH/HEIGHT and transform, then restarts recording.
+    """
+    global picam2, WIDTH, HEIGHT, transform
+
+    if picam2 is None:
+        print("Camera not initialised — cannot reconfigure")
+        return
+
+    old_rotation = ROTATION
+    new_rotation = int(globals().get('rotation', '0'))
+
+    if new_rotation not in (0, 90, 180, 270):
+        print(f"Invalid rotation {new_rotation} — keeping current")
+        return
+
+    if new_rotation == old_rotation:
+        return
+
+    print(f"Reconfiguring camera: {old_rotation}° -> {new_rotation}°")
+    picam2.stop_recording()
+
+    # Recalculate dimensions (swap for 90/270)
+    if new_rotation in (90, 270):
+        WIDTH, HEIGHT = NATIVE_SIZE[1], NATIVE_SIZE[0]
+    else:
+        WIDTH, HEIGHT = NATIVE_SIZE
+
+    # Build new transform
+    if new_rotation == 0:
+        transform = Transform()
+    elif new_rotation == 180:
+        transform = Transform(hflip=1, vflip=1)
+    elif new_rotation == 90:
+        transform = Transform(vflip=1)
+    elif new_rotation == 270:
+        transform = Transform(hflip=1)
+
+    config = picam2.create_video_configuration(
+        main={"size": (WIDTH, HEIGHT)},
+        transform=transform
+    )
+    picam2.configure(config)
+    picam2.start_recording(JpegEncoder(q=60), FileOutput(output))
+
+    print(f"Camera reconfigured: {WIDTH}x{HEIGHT}, rotated {new_rotation}°")
+
+
 # Flask app setup
 app = Flask(__name__)
 
@@ -978,6 +1032,8 @@ def save_config_route():
 
     old_port = globals().get('camera_port', '8000')
     new_port = config_key_value.get('camera_port', old_port)
+    old_rotation = int(globals().get('rotation', '0'))
+    new_rotation_str = config_key_value.get('rotation', str(old_rotation))
 
     error_text = """"""
     for key, value in config_key_value.items():
@@ -1012,6 +1068,8 @@ def save_config_route():
         return error_text, 400
     else:
         save_config(config_key_value)
+        if int(new_rotation_str) != old_rotation:
+            reconfigure_camera()
         if new_port != old_port:
             print(f"Port changed from {old_port} to {new_port} — restarting server...")
             os.execv(sys.executable, [sys.executable] + sys.argv + ['--restart-port', new_port])
@@ -1304,7 +1362,7 @@ if __name__ == '__main__':
     print(f"Streaming rotated {ROTATION}° video at {WIDTH}x{HEIGHT}")
     print("New: Fullscreen view at /full.html")
     print("Capture: Button on index page saves/displays latest photo")
-    print("Config: Set rotation at /config.html (restart server to apply)")
+    print("Config: Set rotation at /config.html (applies immediately)")
 
     thread = Thread(target=background_capture_task, args=(int(globals()['time_before_image']),), daemon=True)
     thread.start()
