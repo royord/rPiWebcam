@@ -69,7 +69,13 @@ def load_config():
         config.read(CONFIG_FILE)
         if config.has_section('camera') and config.has_option('camera', 'rotation'):
             for key, value in config.items('camera'):
-                configs[key] = config.get('camera', key)
+                # Convert 'true'/'false' strings to actual booleans for checkbox fields
+                if key in ('embed_timestamp', 'camera_daylight_savings'):
+                    if value.lower() == 'true':
+                        value = True
+                    elif value.lower() == 'false':
+                        value = False
+                configs[key] = value
                 # print("Current config: ", key, " = ", value)
 
     for key, value in default_config.items():
@@ -449,8 +455,8 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
     <div class="field">
         <label for="embed_timestamp">Embed Timestamp</label>
         <select name="embed_timestamp">
-            <option value="true" {_opt(True, [_bool_val('embed_timestamp')])}>True</option>
-            <option value="false" {_opt(False, [not _bool_val('embed_timestamp')])}>False</option>
+            <option value="true" {_opt(_bool_val('embed_timestamp'), [True])}>True</option>
+            <option value="false" {_opt(_bool_val('embed_timestamp'), [False])}>False</option>
         </select>
     </div>
 
@@ -627,8 +633,8 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
     <div class="field">
         <label for="camera_daylight_savings">Daylight Saving Time</label>
         <select name="camera_daylight_savings">
-            <option value="true" {_opt(True, [_bool_val('camera_daylight_savings')])}>True</option>
-            <option value="false" {_opt(False, [not _bool_val('camera_daylight_savings')])}>False</option>
+            <option value="true" {_opt(_bool_val('camera_daylight_savings'), [True])}>True</option>
+            <option value="false" {_opt(_bool_val('camera_daylight_savings'), [False])}>False</option>
         </select>
     </div>
 
@@ -1209,6 +1215,7 @@ def file_date_string():
 def capture_embedded_photo():
     """Capture a single high-quality JPEG still from the camera, with embedded text."""
     print("""Capture a single high-quality JPEG still from the camera, with embedded text.""")
+    script_dir = os.path.dirname(__file__)
     photo_buffer = BytesIO()
     picam2.capture_file(photo_buffer, name="main", format="jpeg")
     photo_buffer.seek(0)
@@ -1221,7 +1228,9 @@ def capture_embedded_photo():
     background.save(output_buffer, format="jpeg", quality=100)
     output_buffer.seek(0)
     destination = ""
-    file_name = f"{globals()['output_folder']}/{globals()['camera_name']}_{file_date_string()}.jpg"
+    output_dir = os.path.join(script_dir, globals().get('output_folder', 'image_dir'))
+    os.makedirs(output_dir, exist_ok=True)
+    file_name = os.path.join(output_dir, f"{globals()['camera_name']}_{file_date_string()}.jpg")
     for dest in globals()['ftp-destination'].split(','):
         if dest.endswith('/'):
             destination = dest[:-1]
@@ -1292,7 +1301,7 @@ def create_embed_text():
     """
     camera_name = globals()['camera_name']
     script_dir = os.path.dirname(__file__)
-    if len(globals()['embed_timestamp']) > 2:
+    if globals().get('embed_timestamp') is True:
         camera_name = globals()['camera_name'] + ' - ' + cam_time()
 
     # sample text and font
