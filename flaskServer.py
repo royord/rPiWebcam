@@ -385,9 +385,9 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
 <div class="settings-pane">
     <div class="pane-label">Settings</div>
     <div class="tab-btns">
-        <button class="tab-btn active" onclick="switchTab(event, 'tab-camera')">Camera Settings</button>
-        <button class="tab-btn" onclick="switchTab(event, 'tab-transfer')">Transfer Settings</button>
-        <button class="tab-btn" onclick="switchTab(event, 'tab-system')">System</button>
+        <button type="button" class="tab-btn active" onclick="switchTab(event, 'tab-camera')">Camera Settings</button>
+        <button type="button" class="tab-btn" onclick="switchTab(event, 'tab-transfer')">Transfer Settings</button>
+        <button type="button" class="tab-btn" onclick="switchTab(event, 'tab-system')">System</button>
     </div>
 <!-- Tab 2: Camera Settings -->
 <div id="tab-camera" class="tab-content active">
