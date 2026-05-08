@@ -115,10 +115,13 @@ def save_config(rotation):
             # print(key, value)
             # Convert 'true'/'false' strings to actual booleans for checkbox fields
             if key in ('embed_timestamp', 'camera_daylight_savings'):
+                print(f"save_config: converting {key} from {value!r} (type {type(value).__name__})")
                 if value == 'true':
                     value = True
+                    print(f"save_config: {key} -> True")
                 elif value == 'false':
                     value = False
+                    print(f"save_config: {key} -> False")
             try:
                 configs[key] = value
             except Exception as e:
@@ -368,6 +371,7 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
 </head>
 <body>
 <h1>Camera Configuration</h1>
+<!-- DEBUG: camera_daylight_savings = {globals().get('camera_daylight_savings', 'NOT SET')!r} (_bool_val = {_bool_val('camera_daylight_savings')}) embed_timestamp = {globals().get('embed_timestamp', 'NOT SET')!r} -->
 
 <form id="configForm" method="POST" action="/save_config">
     <input type="hidden" name="_active_tab" id="_active_tab" value="camera">
