@@ -85,7 +85,7 @@ def load_config():
         try:
             int(val)
         except (ValueError, TypeError):
-            defaults = {'camera_port': '80', 'output_width': '0', 'output_height': '0', 'output_max_filesize_kb': '0', 'time_before_image': '10'}
+            defaults = {'camera_port': '8000', 'output_width': '0', 'output_height': '0', 'output_max_filesize_kb': '0', 'time_before_image': '10'}
             globals()[key] = defaults.get(key, '0')
 
 
@@ -663,7 +663,7 @@ def save_config_route():
     #     print(e)
     #     return "Invalid rotation", 400
 
-    old_port = globals().get('camera_port', '80')
+    old_port = globals().get('camera_port', '8000')
     new_port = config_key_value.get('camera_port', old_port)
 
     error_text = """"""
