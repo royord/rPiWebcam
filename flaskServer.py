@@ -13,8 +13,9 @@ import io
 import logging
 import configparser
 import os
+import shutil
 import time
-from threading import Condition, Thread
+from threading import Condition, Thread, Event
 from flask import Flask, Response, redirect, request, render_template_string
 from io import BytesIO
 from flask import send_file
@@ -41,6 +42,7 @@ default_config = {
     'camera_name': 'camera_name',
     'rotation': '0',
     'time_before_image': '10',
+    'time_before_first_image': '120',
     'output_width': None,
     'output_height': None,
     'output_extension': 'extension',
@@ -49,6 +51,11 @@ default_config = {
     'output_max_filesize_kb':0,
     'output_folder':'image_dir',
     'embed_timestamp': 'embed_timestamp',
+    'embed_camera_name': 'embed_camera_name',
+    'archive_retention_days': '30',
+    'reserved_space_gb': '5',
+    '_bg_restart_event': None,
+    '_last_cleanup_time': 0,
     'file_name': 'file_name',
     'text_size': '18',
     'text_color': 'silver',
@@ -68,7 +75,13 @@ def load_config():
         config.read(CONFIG_FILE)
         if config.has_section('camera') and config.has_option('camera', 'rotation'):
             for key, value in config.items('camera'):
-                configs[key] = config.get('camera', key)
+                # Convert 'true'/'false' strings to actual booleans for checkbox fields
+                if key in ('embed_timestamp', 'embed_camera_name', 'camera_daylight_savings'):
+                    if value.lower() == 'true':
+                        value = True
+                    elif value.lower() == 'false':
+                        value = False
+                configs[key] = value
                 # print("Current config: ", key, " = ", value)
 
     for key, value in default_config.items():
@@ -80,12 +93,12 @@ def load_config():
     globals().update(configs)
 
     # Validate critical integer fields; default to safe values if corrupted
-    for key in ('camera_port', 'time_before_image', 'output_width', 'output_height', 'output_max_filesize_kb'):
+    for key in ('camera_port', 'time_before_image', 'time_before_first_image', 'output_width', 'output_height', 'output_max_filesize_kb'):
         val = globals().get(key)
         try:
             int(val)
         except (ValueError, TypeError):
-            defaults = {'camera_port': '8000', 'output_width': '0', 'output_height': '0', 'output_max_filesize_kb': '0', 'time_before_image': '10'}
+            defaults = {'camera_port': '8000', 'output_width': '0', 'output_height': '0', 'output_max_filesize_kb': '0', 'time_before_image': '10', 'time_before_first_image': '120'}
             globals()[key] = defaults.get(key, '0')
 
 
@@ -107,38 +120,24 @@ def save_config(rotation):
     """Save rotation to config file."""
     config = configparser.ConfigParser()
     configs = {}
-    print("Save config: ", rotation)
-    # config['camera'] = {'rotation': str(rotation)}
     try:
         for key, value in rotation.items():
-            # print(key, value)
-            try:
-                configs[key] = value
-            except Exception as e:
-                print("Error updating configs:")
-                print(e)
-            # try:
-            #     config[key] = value
-            # except Exception as e:
-            #     print("Error updating config:")
-            #     print(e)
-            # print("Save config: ", key, " = ", value)
+            # Convert 'true'/'false' strings to actual booleans for checkbox fields
+            if key in ('embed_timestamp', 'embed_camera_name', 'camera_daylight_savings'):
+                if value == 'true':
+                    value = True
+                elif value == 'false':
+                    value = False
+            configs[key] = value
             globals()[key] = value
         globals().update(configs)
-        config['camera'] = configs # this will actually write the config out
+        config['camera'] = configs
         with open(CONFIG_FILE, 'w') as f:
             config.write(f)
-
-        # for key, value in globals().items():
-        #     if key in default_config.keys():
-        #         print(key, "::", value)
     except Exception as e:
-        print("Error saving config")
-        print(e)
-
-    print("trying to load config again:")
-    # load_config()
-    print("trying to load config again END")
+        print(f"Error saving config: {e}")
+        import traceback
+        traceback.print_exc()
 
     # print("--==GLOBALS==--")
     # for key, value in globals().items():
@@ -197,32 +196,50 @@ elif ROTATION == 270:
 else:
     raise ValueError("Unsupported rotation; use 0, 90, 180, or 270")
 
+# Module-level camera instance (initialised in __main__ block)
+picam2 = None
+
 PAGE = f"""\
 <html>
 <head>
 <title>picamera2 MJPEG streaming demo</title>
+<style>
+body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}
+h1 {{ margin: 0 0 16px; font-size: 20px; color: #333; }}
+.stream-box {{ background: #000; border-radius: 8px; overflow: hidden; max-width: 720px; }}
+.stream-box img {{ width: 100%; display: block; }}
+.controls {{ max-width: 720px; margin: 12px 0; display: flex; gap: 8px; flex-wrap: wrap; }}
+.controls a, .controls button {{
+    padding: 8px 16px; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; text-decoration: none; color: #fff;
+}}
+.controls button {{ background: #007bff; }}
+.controls a {{ background: #6c757d; }}
+#photo {{ display: none; max-width: 720px; margin-top: 12px; border-radius: 8px; }}
+</style>
 </head>
 <body>
-<h1>Picamera2 MJPEG Streaming Demo (Rotated {ROTATION}°)</h1>
-<img src="/stream.mjpg" width="{WIDTH/8}" height="{HEIGHT/8}" />
-<p><a href="/full.html">Go to Fullscreen View</a> | <a href="/config.html">Configure Settings</a></p>
-<button id="captureBtn">Capture Photo</button>
-<button id="captureEmbeddedBtn">Capture Photo with Embedded Text</button>
-
-<img id="photo" style="display: none; width: {WIDTH/8}px; height: {HEIGHT/8}px; margin-top: 10px;" />
+<h1>picamera2 MJPEG Streaming (Rotated {ROTATION}&deg;)</h1>
+<div class="stream-box">
+    <img src="/stream.mjpg" />
+</div>
+<div class="controls">
+    <button id="captureBtn">Capture Photo</button>
+    <button id="captureEmbeddedBtn">Capture with Text</button>
+    <a href="/full.html">Fullscreen</a>
+    <a href="/config.html">Configure Settings</a>
+</div>
+<img id="photo" />
 <script>
 document.getElementById('captureBtn').onclick = function() {{
     const photoImg = document.getElementById('photo');
     photoImg.src = '/capture.jpg?' + Date.now();
     photoImg.style.display = 'block';
 }};
-
 document.getElementById('captureEmbeddedBtn').onclick = function() {{
     const photoImg = document.getElementById('photo');
     photoImg.src = '/capture_embedded.jpg?' + Date.now();
     photoImg.style.display = 'block';
 }};
-
 if (window.location.search.includes('saved=1')) {{
     alert('Configuration saved!');
 }}
@@ -263,220 +280,586 @@ function toggleFullscreen() {{
 """
 
 def generate_config_page():
+    def _opt(selected, values):
+        """Return 'selected' if value matches."""
+        return 'selected' if selected in values else ''
+
     return f"""\
 <html>
 <head>
-<title>Configure Rotation</title>
+<title>Camera Configuration</title>
+<style>
+body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}
+h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
+.two-pane {{ display: flex; gap: 20px; align-items: flex-start; }}
+.live-pane {{
+    flex: 0 0 640px; position: sticky; top: 20px;
+}}
+.settings-pane {{
+    flex: 1; min-width: 0;
+}}
+.pane-label {{
+    font-size: 13px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}}
+.tab-btns {{ display: flex; gap: 0; border-bottom: 2px solid #dee2e6; background: #fff; margin-bottom: 20px; }}
+.tab-btn {{
+    padding: 10px 24px; border: none; background: none; font-size: 15px; cursor: pointer;
+    color: #666; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all .15s;
+}}
+.tab-btn:hover {{ color: #007bff; }}
+.tab-btn.active {{ color: #007bff; border-bottom-color: #007bff; font-weight: 500; }}
+.tab-content {{ display: none; }}
+.tab-content.active {{ display: block; }}
+.field {{ margin-bottom: 16px; }}
+.field label {{ display: block; font-size: 13px; font-weight: 500; color: #555; margin-bottom: 4px; }}
+.field input[type="text"],
+.field input[type="password"],
+.field input[type="number"],
+.field select {{
+    width: 100%; max-width: 400px; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px;
+    font-size: 14px; box-sizing: border-box;
+}}
+.field input:focus, .field select:focus {{ outline: none; border-color: #007bff; box-shadow: 0 0 0 2px rgba(0,123,255,.15); }}
+.field select {{ background: #fff; }}
+.field .hint {{ font-size: 12px; color: #888; margin-top: 4px; max-width: 400px; }}
+.section-title {{ font-size: 16px; font-weight: 600; color: #333; margin: 24px 0 16px; padding-bottom: 8px; border-bottom: 1px solid #eee; }}
+.section-title:first-child {{ margin-top: 0; }}
+.storage-gauge {{ margin: 16px 0; padding: 16px; background: #f8f9fa; border-radius: 8px; }}
+.storage-bar {{ height: 24px; border-radius: 12px; background: #e9ecef; overflow: hidden; position: relative; }}
+.storage-fill {{ height: 100%; border-radius: 12px; background: #4caf50; transition: width 0.5s, background 0.5s; min-width: 0; }}
+.storage-fill.warn {{ background: #ff9800; }}
+.storage-fill.crit {{ background: #f44336; }}
+.storage-labels {{ display: flex; justify-content: space-between; margin-top: 8px; font-size: 13px; color: #555; }}
+.storage-free, .storage-total {{ white-space: nowrap; }}
+.btn {{
+    padding: 8px 20px; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; text-decoration: none;
+    display: inline-block;
+}}
+.btn-primary {{ background: #007bff; color: #fff; }}
+.btn-success {{ background: #28a745; color: #fff; }}
+.btn-warning {{ background: #ffc107; color: #000; }}
+.btn-warning:hover {{ background: #e0a800; }}
+.cleanup-result {{ margin-top: 12px; padding: 10px 14px; border-radius: 6px; font-size: 13px; }}
+.cleanup-result.ok {{ background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }}
+.cleanup-result.error {{ background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }}
+.btn-secondary {{ background: #6c757d; color: #fff; text-decoration: none; }}
+.btn-group {{ margin-top: 20px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }}
+.stream-preview {{ background: #000; border-radius: 8px; overflow: hidden; }}
+.stream-preview img {{ width: 100%; display: block; }}
+.modal-overlay {{
+    display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+}}
+.modal {{
+    background: #fff; margin: 10% auto; padding: 24px; border-radius: 8px;
+    width: 90%; max-width: 480px; position: relative;
+}}
+.modal h2 {{ margin-top: 0; }}
+.modal .close {{ position: absolute; top: 8px; right: 16px; font-size: 24px; cursor: pointer; color: #999; }}
+.toast {{
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #2d6a4e; color: #fff; padding: 12px 28px; border-radius: 6px;
+    font-size: 15px; font-weight: 500; opacity: 0; pointer-events: none;
+    transition: opacity .3s, transform .3s; z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,.25);
+}}
+.toast.show {{
+    opacity: 1; transform: translateX(-50%) translateY(0);
+}}
+@media (max-width: 900px) {{
+    .two-pane {{ flex-direction: column; }}
+    .live-pane {{ flex: none; width: 100%; position: static; }}
+}}
+</style>
 </head>
 <body>
 <h1>Camera Configuration</h1>
 
-<div style="margin-bottom:16px;">
-    <a href="/" style="display:inline-block; padding:8px 16px; background:#6c757d; color:#fff; text-decoration:none; border:none; border-radius:4px;">Back to Stream</a>
-    <input type="button" id="topSaveBtn" value="Save Configuration" style="padding:8px 16px; background:#007bff; color:#fff; border:none; border-radius:4px; cursor:pointer;" onclick="document.getElementById('configForm').submit();">
-    <a href="/export_config" style="display:inline-block; padding:8px 16px; background:#007bff; color:#fff; text-decoration:none; border-radius:4px;">Export Configuration</a>
-    <button id="openImportBtn" style="padding:8px 16px; background:#28a745; color:#fff; border:none; border-radius:4px; cursor:pointer;">Import Configuration</button>
+<form id="configForm" method="POST" action="/save_config">
+    <input type="hidden" name="_active_tab" id="_active_tab" value="camera">
+
+<!-- Two-pane layout -->
+<div class="two-pane">
+
+<!-- Left pane: Live View (always visible) -->
+<div class="live-pane">
+    <div class="pane-label">Live View</div>
+    <div class="stream-preview">
+        <img src="/stream.mjpg" />
+    </div>
+    <div class="btn-group">
+        <button type="button" class="btn btn-primary" onclick="capturePhoto('/capture.jpg')">Capture Photo</button>
+        <button type="button" class="btn btn-primary" onclick="capturePhoto('/capture_embedded.jpg')">Capture with Text</button>
+        <a href="/full.html" class="btn btn-secondary">Fullscreen View</a>
+    </div>
+    <div id="livePhoto" style="display:none; margin-top:16px;">
+        <img id="livePhotoImg" style="max-width:100%; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,.15);">
+    </div>
+    <script>
+    function capturePhoto(url) {{
+        var img = document.getElementById('livePhotoImg');
+        img.src = url + '?' + Date.now();
+        document.getElementById('livePhoto').style.display = 'block';
+    }}
+    </script>
 </div>
 
-<form id="configForm" method="POST" action="/save_config">
-    <table>
-        <tr><td colspan=2><h2>Transfer Configuration</h2></td></tr>
-        <tr>
-            <td>ftp-mode:</td>
-            <td><input type="text" name="ftp-mode" value="{globals()['ftp-mode']}"></td>
-        </tr>
-        <tr>
-            <td>ftp-server:</td>
-            <td><input type="text" name="ftp-server" value="{globals()['ftp-server']}"></td>
-        </tr>
-        <tr>
-            <td>ftp-port:</td>
-            <td><input type="text" name="ftp-port" value="{globals()['ftp-port']}"></td>
-        </tr>
-        <tr>
-            <td>ftp-username:</td>
-            <td><input type="text" name="ftp-username" value="{globals()['ftp-username']}"></td>
-        </tr>
-        <tr>
-            <td>ftp-password:</td>
-            <td><input type="password" name="ftp-password" value="{globals()['ftp-password']}"></td>
-        </tr>
-        <tr>
-            <td>ftp-destination:</td>
-            <td><input type="text" name="ftp-destination" value="{globals()['ftp-destination']}"></td>
-        </tr>
-        <tr><br></tr>
-        <tr><td colspan=2><h2>Camera Config</h2></td></tr>
-        <tr>
-            <td>camera_name:</td>
-            <td><input type="text" name="camera_name" value="{globals()['camera_name']}"></td>
-        </tr>
-        <tr>
-            <td>Rotation (degrees):</td>
-            <td>
-                <select id="rotation" name="rotation">
-                    <option value="0" " + ('selected' if {ROTATION} == 0 else '') + ">0</option>
-                    <option value="90" " + ('selected' if {ROTATION} == 90 else '') + ">90</option>
-                    <option value="180" " + ('selected' if {ROTATION} == 180 else '') + ">180</option>
-                    <option value="270" " + ('selected' if {ROTATION} == 270 else '') + ">270</option>
-                </select>
-            </td>
-        </tr>
-        <tr>
-            <td>time_before_image (seconds):</td>
-            <td><input type="text" name="time_before_image" value="{globals()['time_before_image']}"></td>
-        </tr>
-        <tr>
-            <td>output_width:</td>
-            <td><input type="text" name="output_width" value="{globals()['output_width']}"></td>
-        </tr>
-        <tr>
-            <td>output_height:</td>
-            <td><input type="text" name="output_height" value="{globals()['output_height']}"></td>
-        </tr>
-        <tr>
-            <td>output_extension:</td>
-            <td>
-                <select name="output_extension">
-                    <option value="jpg" " + ('selected' if globals()['output_extension'] == 'jpg' else '') + ">jpg</option>
-                    <option value="jpeg" " + ('selected' if globals()['output_extension'] == 'jpeg' else '') + ">jpeg</option>
-                    <option value="png" " + ('selected' if globals()['output_extension'] == 'png' else '') + ">png</option>
-                </select>
-            </td>
-        </tr>
-        <tr>
-            <td>embed_timestamp:</td>
-            <td>
-                <select name="embed_timestamp">
-                    <option value="true" " + ('selected' if _bool_val('embed_timestamp') else '') + ">True</option>
-                    <option value="false" " + ('selected' if not _bool_val('embed_timestamp') else '') + ">False</option>
-                </select>
-            </td>
-        </tr>
-        <tr>
-            <td>file_name:</td>
-            <td><input type="text" name="file_name" value="{globals()['file_name']}"></td>
-        </tr>
-        <tr>
-            <td>text_size:</td>
-            <td><input type="text" name="text_size" value="{globals()['text_size']}"></td>
-        </tr>
-        <tr>
-            <td>text_color:</td>
-            <td><input type="text" name="text_color" value="{globals()['text_color']}"></td>
-        </tr>
-        <tr>
-            <td>text_background:</td>
-            <td><input type="text" name="text_background" value="{globals()['text_background']}"></td>
-        </tr>
-        <tr>
-            <td>camera_timezone:</td>
-            <td>
-                <input list="timezones" name="camera_timezone" value="{globals()['camera_timezone']}" placeholder="e.g. America/New_York">
-                <datalist id="timezones">
-                    <option value="America/New_York">
-                    <option value="America/Chicago">
-                    <option value="America/Denver">
-                    <option value="America/Los_Angeles">
-                    <option value="America/Anchorage">
-                    <option value="Pacific/Honolulu">
-                    <option value="America/Phoenix">
-                    <option value="America/Toronto">
-                    <option value="America/Vancouver">
-                    <option value="America/Regina">
-                    <option value="America/Mexico_City">
-                    <option value="America/Bogota">
-                    <option value="America/Lima">
-                    <option value="America/Sao_Paulo">
-                    <option value="America/Argentina/Buenos_Aires">
-                    <option value="America/Santiago">
-                    <option value="Europe/London">
-                    <option value="Europe/Dublin">
-                    <option value="Europe/Lisbon">
-                    <option value="Europe/Paris">
-                    <option value="Europe/Berlin">
-                    <option value="Europe/Rome">
-                    <option value="Europe/Madrid">
-                    <option value="Europe/Amsterdam">
-                    <option value="Europe/Brussels">
-                    <option value="Europe/Vienna">
-                    <option value="Europe/Zurich">
-                    <option value="Europe/Prague">
-                    <option value="Europe/Warsaw">
-                    <option value="Europe/Stockholm">
-                    <option value="Europe/Copenhagen">
-                    <option value="Europe/Oslo">
-                    <option value="Europe/Helsinki">
-                    <option value="Europe/Athens">
-                    <option value="Europe/Istanbul">
-                    <option value="Europe/Moscow">
-                    <option value="Asia/Dubai">
-                    <option value="Asia/Kolkata">
-                    <option value="Asia/Shanghai">
-                    <option value="Asia/Hong_Kong">
-                    <option value="Asia/Singapore">
-                    <option value="Asia/Tokyo">
-                    <option value="Asia/Seoul">
-                    <option value="Asia/Taipei">
-                    <option value="Asia/Bangkok">
-                    <option value="Asia/Jakarta">
-                    <option value="Asia/Manila">
-                    <option value="Australia/Sydney">
-                    <option value="Australia/Melbourne">
-                    <option value="Australia/Brisbane">
-                    <option value="Australia/Perth">
-                    <option value="Pacific/Auckland">
-                    <option value="Pacific/Fiji">
-                </datalist>
-            </td>
-        </tr>
-        <tr>
-         <td>camera_daylight_savings:</td>
-            <td>
-                <select name="camera_daylight_savings">
-                    <option value="true" " + ('selected' if _bool_val('camera_daylight_savings') else '') + ">True</option>
-                    <option value="false" " + ('selected' if not _bool_val('camera_daylight_savings') else '') + ">False</option>
-                </select>
-            </td>
-        </tr>
-        <tr>
-            <td>camera_port:</td>
-            <td><input type="text" name="camera_port" value="{globals()['camera_port']}"></td>
-        </tr>
-        <tr>
-            <td>camera_url:</td>
-            <td><input type="text" name="camera_url" value="{globals()['camera_url']}"></td>
-        </tr>
-        <tr>
-            <td colspan=2>
-                <input type="submit" value="Save Configuration" style="padding:8px 16px; background:#007bff; color:#fff; border:none; border-radius:4px; cursor:pointer;">
-            </td>
-        </tr>
-    </table>
+<!-- Right pane: Settings tabs -->
+<div class="settings-pane">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div class="pane-label">Settings</div>
+        <button type="button" class="btn btn-primary" id="saveBtn">Save Configuration</button>
+    </div>
+    <div class="tab-btns">
+        <button type="button" class="tab-btn active" onclick="switchTab(event, 'tab-camera')">Camera Settings</button>
+        <button type="button" class="tab-btn" onclick="switchTab(event, 'tab-transfer')">Transfer Settings</button>
+        <button type="button" class="tab-btn" onclick="switchTab(event, 'tab-system')">System</button>
+    </div>
+<!-- Tab 2: Camera Settings -->
+<div id="tab-camera" class="tab-content active">
+    <div class="field">
+        <label for="camera_name">Camera Name</label>
+        <input type="text" name="camera_name" id="camera_name" value="{globals()['camera_name']}" placeholder="e.g. front_porch">
+        <div class="hint">No spaces — use underscores. Used in filenames and embedded text.</div>
+    </div>
+
+    <div class="field">
+        <label for="rotation">Rotation</label>
+        <select name="rotation" id="rotation">
+            <option value="0" {_opt(int(globals()['rotation']), [0])}>0&deg;</option>
+            <option value="90" {_opt(int(globals()['rotation']), [90])}>90&deg;</option>
+            <option value="180" {_opt(int(globals()['rotation']), [180])}>180&deg;</option>
+            <option value="270" {_opt(int(globals()['rotation']), [270])}>270&deg;</option>
+        </select>
+        <div class="hint">Applies immediately.</div>
+    </div>
+
+    <div class="field">
+        <label for="time_before_first_image">Delay Before First Photo (seconds)</label>
+        <input type="number" name="time_before_first_image" id="time_before_first_image" value="{globals()['time_before_first_image']}" min="0">
+        <div class="hint">Initial wait before the first scheduled capture. Set to 0 to capture immediately on startup.</div>
+    </div>
+
+    <div class="field">
+        <label for="time_before_image">Scheduled Capture Interval (seconds)</label>
+        <input type="number" name="time_before_image" id="time_before_image" value="{globals()['time_before_image']}" min="0">
+        <div class="hint">Gap between consecutive scheduled captures.</div>
+    </div>
+
+    <div class="section-title">Output Settings</div>
+
+    <div class="field">
+        <label for="output_width">Output Width (pixels)</label>
+        <input type="number" name="output_width" id="output_width" value="{globals()['output_width']}" min="0">
+        <div class="hint">Defaults to camera sensor max width.</div>
+    </div>
+
+    <div class="field">
+        <label for="output_height">Output Height (pixels)</label>
+        <input type="number" name="output_height" id="output_height" value="{globals()['output_height']}" min="0">
+        <div class="hint">Defaults to camera sensor max height.</div>
+    </div>
+
+    <div class="field">
+        <label for="output_extension">Output Format</label>
+        <select name="output_extension">
+            <option value="jpg" {_opt(globals()['output_extension'], ['jpg'])}>JPEG (.jpg)</option>
+            <option value="jpeg" {_opt(globals()['output_extension'], ['jpeg'])}>JPEG (.jpeg)</option>
+            <option value="png" {_opt(globals()['output_extension'], ['png'])}>PNG (.png)</option>
+        </select>
+    </div>
+
+    <div class="field">
+        <label for="embed_camera_name">Embed Camera Name</label>
+        <select name="embed_camera_name">
+            <option value="true" {_opt(_bool_val('embed_camera_name'), [True])}>True</option>
+            <option value="false" {_opt(_bool_val('embed_camera_name'), [False])}>False</option>
+        </select>
+    </div>
+
+    <div class="field">
+        <label for="embed_timestamp">Embed Timestamp</label>
+        <select name="embed_timestamp">
+            <option value="true" {_opt(_bool_val('embed_timestamp'), [True])}>True</option>
+            <option value="false" {_opt(_bool_val('embed_timestamp'), [False])}>False</option>
+        </select>
+    </div>
+
+    <div class="field">
+        <label for="file_name">File Name Prefix</label>
+        <input type="text" name="file_name" id="file_name" value="{globals()['file_name']}" placeholder="e.g. frontporch">
+    </div>
+
+    <div class="section-title">Text Overlay</div>
+
+    <div class="field">
+        <label for="text_size">Text Size (points)</label>
+        <input type="number" name="text_size" id="text_size" value="{globals()['text_size']}" min="6" max="120">
+    </div>
+
+    <div class="field">
+        <label for="text_color">Text Color</label>
+        <input type="text" name="text_color" id="text_color" value="{globals()['text_color']}" placeholder="e.g. silver, white, #ffffff">
+    </div>
+
+    <div class="field">
+        <label for="text_background">Text Background</label>
+        <input type="text" name="text_background" id="text_background" value="{globals()['text_background']}" placeholder="e.g. black, rgba(0,0,0,0.5)">
+    </div>
+</div>
+
+<!-- Tab 2: Transfer Settings -->
+<div id="tab-transfer" class="tab-content">
+    <div class="section-title">FTP / SFTP Configuration</div>
+
+    <div class="field">
+        <label for="ftp-mode">Transfer Protocol</label>
+        <select name="ftp-mode">
+            <option value="sftp" {_opt(globals()['ftp-mode'], ['sftp'])}>SFTP</option>
+            <option value="ftp" {_opt(globals()['ftp-mode'], ['ftp'])}>FTP</option>
+        </select>
+    </div>
+
+    <div class="field">
+        <label for="ftp-server">Server</label>
+        <input type="text" name="ftp-server" id="ftp-server" value="{globals()['ftp-server']}" placeholder="e.g. ftp.example.com or IP address">
+    </div>
+
+    <div class="field">
+        <label for="ftp-port">Port</label>
+        <input type="number" name="ftp-port" id="ftp-port" value="{globals()['ftp-port']}" min="1" max="65535">
+        <div class="hint">22 for SFTP, 21 for FTP</div>
+    </div>
+
+    <div class="field">
+        <label for="ftp-username">Username</label>
+        <input type="text" name="ftp-username" id="ftp-username" value="{globals()['ftp-username']}">
+    </div>
+
+    <div class="field">
+        <label for="ftp-password">Password</label>
+        <input type="password" name="ftp-password" id="ftp-password" value="{globals()['ftp-password']}">
+    </div>
+
+    <div class="field">
+        <label for="ftp-destination">Destination Path(s)</label>
+        <input type="text" name="ftp-destination" id="ftp-destination" value="{globals()['ftp-destination']}" placeholder="e.g. /home/user/pics, /backup/cam">
+        <div class="hint">Comma-separated list of remote paths. Include trailing / for subdirectory mode.</div>
+    </div>
+
+    <div class="btn-group">
+        <button type="button" class="btn btn-success" id="testConnectionBtn">Test Connection</button>
+        <span id="testResult" style="font-size:14px; margin-left:8px;"></span>
+    </div>
+    <script>
+    (function() {{
+        document.getElementById('testConnectionBtn').addEventListener('click', function() {{
+            var btn = document.getElementById('testConnectionBtn');
+            var result = document.getElementById('testResult');
+            btn.disabled = true;
+            btn.textContent = 'Testing...';
+            result.textContent = '';
+            var form = document.getElementById('configForm');
+            var fd = new FormData(form);
+            fetch('/test_connection', {{
+                method: 'POST',
+                body: fd
+            }}).then(function(r) {{ return r.text().then(function(t) {{ return {{status:r.status, data:t}}; }}); }})
+            .then(function(r) {{
+                if (r.status === 200) {{
+                    try {{ var j = JSON.parse(r.data); }} catch(e) {{ var j = {{status:'ok', message:r.data}}; }}
+                    if (j.status === 'ok') {{
+                        result.textContent = j.message;
+                        result.style.color = '#28a745';
+                    }} else {{
+                        result.textContent = j.message;
+                        result.style.color = '#dc3545';
+                    }}
+                }} else {{
+                    result.textContent = r.data;
+                    result.style.color = '#dc3545';
+                }}
+            }}).catch(function(e) {{
+                result.textContent = 'Network error: ' + e.message;
+                result.style.color = '#dc3545';
+            }}).finally(function() {{
+                btn.disabled = false;
+                btn.textContent = 'Test Connection';
+            }});
+        }});
+    }})();
+    </script>
+</div>
+
+<!-- Tab 4: System -->
+<div id="tab-system" class="tab-content">
+    <div class="section-title">Time & Date</div>
+
+    <div class="field">
+        <label for="camera_timezone">Timezone</label>
+        <input list="timezones" name="camera_timezone" id="camera_timezone" value="{globals()['camera_timezone']}" placeholder="e.g. America/Los_Angeles">
+        <datalist id="timezones">
+            <option value="America/New_York">
+            <option value="America/Chicago">
+            <option value="America/Denver">
+            <option value="America/Los_Angeles">
+            <option value="America/Anchorage">
+            <option value="Pacific/Honolulu">
+            <option value="America/Phoenix">
+            <option value="America/Toronto">
+            <option value="America/Vancouver">
+            <option value="America/Regina">
+            <option value="America/Mexico_City">
+            <option value="America/Bogota">
+            <option value="America/Lima">
+            <option value="America/Sao_Paulo">
+            <option value="America/Argentina/Buenos_Aires">
+            <option value="America/Santiago">
+            <option value="Europe/London">
+            <option value="Europe/Dublin">
+            <option value="Europe/Lisbon">
+            <option value="Europe/Paris">
+            <option value="Europe/Berlin">
+            <option value="Europe/Rome">
+            <option value="Europe/Madrid">
+            <option value="Europe/Amsterdam">
+            <option value="Europe/Brussels">
+            <option value="Europe/Vienna">
+            <option value="Europe/Zurich">
+            <option value="Europe/Prague">
+            <option value="Europe/Warsaw">
+            <option value="Europe/Stockholm">
+            <option value="Europe/Copenhagen">
+            <option value="Europe/Oslo">
+            <option value="Europe/Helsinki">
+            <option value="Europe/Athens">
+            <option value="Europe/Istanbul">
+            <option value="Europe/Moscow">
+            <option value="Asia/Dubai">
+            <option value="Asia/Kolkata">
+            <option value="Asia/Shanghai">
+            <option value="Asia/Hong_Kong">
+            <option value="Asia/Singapore">
+            <option value="Asia/Tokyo">
+            <option value="Asia/Seoul">
+            <option value="Asia/Taipei">
+            <option value="Asia/Bangkok">
+            <option value="Asia/Jakarta">
+            <option value="Asia/Manila">
+            <option value="Australia/Sydney">
+            <option value="Australia/Melbourne">
+            <option value="Australia/Brisbane">
+            <option value="Australia/Perth">
+            <option value="Pacific/Auckland">
+            <option value="Pacific/Fiji">
+        </datalist>
+    </div>
+
+    <div class="field">
+        <label for="camera_daylight_savings">Daylight Saving Time</label>
+        <select name="camera_daylight_savings">
+            <option value="true" {_opt(_bool_val('camera_daylight_savings'), [True])}>True</option>
+            <option value="false" {_opt(_bool_val('camera_daylight_savings'), [False])}>False</option>
+        </select>
+    </div>
+
+    <div class="section-title">Network</div>
+
+    <div class="field">
+        <label for="camera_port">HTTP Port</label>
+        <input type="number" name="camera_port" id="camera_port" value="{globals()['camera_port']}" min="1" max="65535">
+        <div class="hint">Changing this port restarts the server automatically.</div>
+    </div>
+
+    <div class="field">
+        <label for="camera_url">Camera URL</label>
+        <input type="text" name="camera_url" id="camera_url" value="{globals()['camera_url']}" placeholder="e.g. http://camuser.dyndns.org:8000">
+    </div>
+
+    <div class="section-title">Storage</div>
+
+    <div class="storage-gauge">
+        <div class="storage-bar">
+            <div id="storageFill" class="storage-fill" style="width:0%"></div>
+        </div>
+        <div class="storage-labels">
+            <span id="storageUsed">--</span> used
+            <span id="storageFree" class="storage-free">--</span> free
+            <span id="storageTotal" class="storage-total">of --</span>
+        </div>
+    </div>
+    <div style="text-align:center; font-size: 13px; color: #888; margin-top: 6px;">
+        <span id="archiveInfo">--</span>
+    </div>
+
+    <div class="field">
+        <label for="archive_retention_days">Image Retention (days)</label>
+        <input type="number" name="archive_retention_days" id="archive_retention_days" value="{globals()['archive_retention_days']}" min="1" max="3650">
+        <div class="hint">Images older than this are eligible for deletion during cleanup. Min 1 day, max 10 years.</div>
+    </div>
+
+    <div class="field">
+        <label for="reserved_space_gb">Reserved Free Space (GB)</label>
+        <input type="number" name="reserved_space_gb" id="reserved_space_gb" value="{globals()['reserved_space_gb']}" min="1" max="1000" step="0.5">
+        <div class="hint">Always keep this much free space on the drive. The system deletes oldest expired images first.</div>
+    </div>
+
+    <div class="btn-group">
+        <button type="button" class="btn btn-warning" id="cleanupBtn">Run Cleanup Now</button>
+    </div>
+    <div id="cleanupResult" class="cleanup-result" style="display:none"></div>
+    <div class="section-title">Backup & Restore</div>
+
+    <div class="btn-group">
+        <a href="/export_config" class="btn btn-success">Export Configuration</a>
+        <button type="button" class="btn btn-primary" id="openImportBtn">Import Configuration</button>
+    </div>
+</div>
+</div>
+</div>
+
 </form>
 
-<!-- Modal -->
-<div id="importModal" style="display:none; position:fixed; z-index:999; left:0; top:0; width:100%; height:100%; overflow:auto; background:rgba(0,0,0,0.5);">
-    <div style="background:#fff; margin:10% auto; padding:24px; border-radius:8px; width:90%; max-width:480px; position:relative;">
-        <span id="closeImportBtn" style="position:absolute; top:8px; right:16px; font-size:24px; cursor:pointer; color:#999;">&times;</span>
-        <h2 style="margin-top:0;">Import Configuration</h2>
+<!-- Import Modal -->
+<div id="importModal" class="modal-overlay">
+    <div class="modal">
+        <span class="close" id="closeImportBtn">&times;</span>
+        <h2>Import Configuration</h2>
         <p>Upload a previously exported configuration file to apply its settings.</p>
         <form method="POST" action="/import_config" enctype="multipart/form-data">
-            <table>
-                <tr>
-                    <td style="padding:4px 12px 4px 0;">Select config file:</td>
-                    <td><input type="file" name="config_file" accept=".cfg,.ini"></td>
-                </tr>
-                <tr>
-                    <td colspan=2 style="padding-top:12px;">
-                        <input type="submit" value="Import Configuration" style="padding:8px 16px; background:#28a745; color:#fff; border:none; border-radius:4px; cursor:pointer;">
-                    </td>
-                </tr>
-            </table>
+            <div class="field">
+                <label for="config_file">Configuration File</label>
+                <input type="file" name="config_file" id="config_file" accept=".cfg,.ini">
+            </div>
+            <div class="btn-group">
+                <input type="submit" value="Import" class="btn btn-primary">
+            </div>
         </form>
     </div>
 </div>
+
 <script>
+// Tab switching (right pane only)
+function switchTab(e, tabId) {{
+    e.currentTarget.closest('.settings-pane').querySelectorAll('.tab-content').forEach(function(t) {{ t.classList.remove('active'); }});
+    e.currentTarget.closest('.settings-pane').querySelectorAll('.tab-btn').forEach(function(b) {{ b.classList.remove('active'); }});
+    document.getElementById(tabId).classList.add('active');
+    e.currentTarget.classList.add('active');
+    // Persist active tab for form submission and localStorage
+    var name = tabId.replace('tab-', '');
+    try {{ document.getElementById('_active_tab').value = name; localStorage.setItem('configActiveTab', name); }} catch(e) {{}}
+}}
+
+// Save button: AJAX save then reload page
+(function() {{
+    var saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) {{
+        saveBtn.addEventListener('click', function() {{
+            var form = document.getElementById('configForm');
+            var fd = new FormData(form);
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+            fetch('/save_config', {{
+                method: 'POST',
+                body: fd
+            }}).then(function(r) {{
+                if (r.status === 200) {{
+                    // Show toast, then reload to refresh all values
+                    var toast = document.createElement('div');
+                    toast.className = 'toast';
+                    toast.textContent = 'Configuration saved!';
+                    document.body.appendChild(toast);
+                    requestAnimationFrame(function() {{ toast.classList.add('show'); }});
+                    setTimeout(function() {{
+                        toast.classList.remove('show');
+                        setTimeout(function() {{ toast.remove(); }}, 400);
+                    }}, 2000);
+                    window.location.reload();
+                }} else {{
+                    return r.text().then(function(t) {{ alert('Save failed: ' + t); }}, function() {{ alert('Save failed'); }});
+                }}
+            }}).catch(function(e) {{
+                alert('Save failed: ' + e.message);
+            }}).finally(function() {{
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Configuration';
+            }});
+        }});
+    }}
+}})();
+
+// Restore tab and show toast on load
+(function() {{
+    var params = new URLSearchParams(window.location.search);
+    var saved = params.get('saved');
+    var tabParam = params.get('tab');
+
+    // Show toast for save/import
+    if (saved === '1') {{
+        var toast = document.createElement('div');
+        toast.id = 'saveToast';
+        toast.className = 'toast';
+        toast.textContent = 'Configuration saved!';
+        document.body.appendChild(toast);
+        requestAnimationFrame(function() {{ toast.classList.add('show'); }});
+        setTimeout(function() {{
+            toast.classList.remove('show');
+            setTimeout(function() {{ toast.remove(); }}, 400);
+        }}, 5000);
+        // Clear the saved param so toast doesn't reappear on accidental refresh
+        var url = new URL(window.location);
+        url.searchParams.delete('saved');
+        if (url.searchParams.get('tab')) url.searchParams.delete('tab');
+        window.history.replaceState({{}}, '', url);
+    }}
+    if (params.get('imported') === '1') {{
+        var toast = document.createElement('div');
+        toast.id = 'saveToast';
+        toast.className = 'toast';
+        toast.textContent = 'Configuration imported successfully!';
+        document.body.appendChild(toast);
+        requestAnimationFrame(function() {{ toast.classList.add('show'); }});
+        setTimeout(function() {{
+            toast.classList.remove('show');
+            setTimeout(function() {{ toast.remove(); }}, 400);
+        }}, 5000);
+        var url = new URL(window.location);
+        url.searchParams.delete('imported');
+        if (url.searchParams.get('tab')) url.searchParams.delete('tab');
+        window.history.replaceState({{}}, '', url);
+    }}
+
+    // Restore active tab: URL param > localStorage > default 'camera'
+    var activeTab = null;
+    if (tabParam) activeTab = tabParam;
+    else {{
+        try {{ activeTab = localStorage.getItem('configActiveTab'); }} catch(e) {{}}
+    }}
+    if (!activeTab) activeTab = 'camera';
+
+    // Always sync hidden field
+    try {{ document.getElementById('_active_tab').value = activeTab; }} catch(e) {{}}
+
+    if (activeTab !== 'camera') {{
+        var btns = document.querySelector('.settings-pane').querySelectorAll('.tab-btn');
+        var contents = document.querySelector('.settings-pane').querySelectorAll('.tab-content');
+        btns.forEach(function(b) {{ b.classList.remove('active'); }});
+        contents.forEach(function(t) {{ t.classList.remove('active'); }});
+        var target = document.getElementById('tab-' + activeTab);
+        if (target) {{
+            target.classList.add('active');
+            for (var i = 0; i < btns.length; i++) {{
+                if (btns[i].getAttribute('onclick') && btns[i].getAttribute('onclick').indexOf("'tab-" + activeTab + "')") > -1) {{
+                    btns[i].classList.add('active');
+                    break;
+                }}
+            }}
+        }}
+    }}
+}})();
+
+// Import modal
 (function() {{
     var modal = document.getElementById('importModal');
     var openBtn = document.getElementById('openImportBtn');
@@ -484,20 +867,90 @@ def generate_config_page():
     openBtn.onclick = function() {{ modal.style.display = 'block'; }};
     closeBtn.onclick = function() {{ modal.style.display = 'none'; }};
     window.onclick = function(e) {{ if (e.target === modal) modal.style.display = 'none'; }};
+}})();
 
-    // Unsaved-changes guard: compare current field values to originals
+// Disk usage gauge (updates every 10 seconds)
+(function() {{
+    function updateStorage() {{
+        fetch('/disk_usage')
+            .then(function(r) {{ return r.json(); }})
+            .then(function(d) {{
+                var fill = document.getElementById('storageFill');
+                var usedEl = document.getElementById('storageUsed');
+                var freeEl = document.getElementById('storageFree');
+                var totalEl = document.getElementById('storageTotal');
+                if (!fill) return;
+                fill.style.width = d.percent + '%';
+                fill.className = 'storage-fill' + (d.percent >= 90 ? ' crit' : d.percent >= 70 ? ' warn' : '');
+                usedEl.textContent = d.used_gb.toFixed(1) + ' GB';
+                freeEl.textContent = d.free_gb.toFixed(1) + ' GB free';
+                totalEl.textContent = 'of ' + d.total_gb.toFixed(1) + ' GB';
+                // Update archive info if elements exist
+                var archiveEl = document.getElementById('archiveInfo');
+                if (archiveEl) {{
+                    archiveEl.textContent = d.total_images + ' images total, ' + d.archive_images + ' eligible for cleanup';
+                }}
+            }})
+            .catch(function() {{}});
+    }}
+    updateStorage();
+    setInterval(updateStorage, 10000);
+}})();
+
+// Cleanup button handler
+(function() {{
+    var cleanupBtn = document.getElementById('cleanupBtn');
+    var resultDiv = document.getElementById('cleanupResult');
+    if (cleanupBtn) {{
+        cleanupBtn.addEventListener('click', function() {{
+            cleanupBtn.disabled = true;
+            cleanupBtn.textContent = 'Cleaning up...';
+            if (resultDiv) {{
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'cleanup-result';
+                resultDiv.textContent = 'Running cleanup...';
+            }}
+            fetch('/cleanup_disk')
+                .then(function(r) {{ return r.json(); }})
+                .then(function(d) {{
+                    if (resultDiv) {{
+                        resultDiv.className = 'cleanup-result ok';
+                        var freedMB = (d.freed_bytes / (1024*1024)).toFixed(1);
+                        resultDiv.textContent = 'Cleaned up: ' + d.deleted + ' image(s) deleted, ' + freedMB + ' MB freed.';
+                    }}
+                }})
+                .catch(function(e) {{
+                    if (resultDiv) {{
+                        resultDiv.className = 'cleanup-result error';
+                        resultDiv.textContent = 'Error: ' + e.message;
+                    }}
+                }})
+                .finally(function() {{
+                    cleanupBtn.disabled = false;
+                    cleanupBtn.textContent = 'Run Cleanup Now';
+                }});
+        }});
+    }}
+}})();
+
+// Unsaved-changes guard
+(function() {{
     var originalValues = {{
         'ftp-mode': '{globals()['ftp-mode']}',
         'ftp-server': '{globals()['ftp-server']}',
         'ftp-port': '{globals()['ftp-port']}',
         'ftp-username': '{globals()['ftp-username']}',
         'camera_name': '{globals()['camera_name']}',
-        'rotation': '{ROTATION}',
+        'rotation': '{globals()['rotation']}',
+        'time_before_first_image': '{globals()['time_before_first_image']}',
         'time_before_image': '{globals()['time_before_image']}',
         'output_width': '{globals()['output_width']}',
         'output_height': '{globals()['output_height']}',
         'output_extension': '{globals()['output_extension']}',
         'embed_timestamp': _bool_val('embed_timestamp') ? 'true' : 'false',
+        'embed_camera_name': _bool_val('embed_camera_name') ? 'true' : 'false',
+        'archive_retention_days': '{globals()['archive_retention_days']}',
+        'reserved_space_gb': '{globals()['reserved_space_gb']}',
         'file_name': '{globals()['file_name']}',
         'text_size': '{globals()['text_size']}',
         'text_color': '{globals()['text_color']}',
@@ -509,9 +962,8 @@ def generate_config_page():
     }};
     var hasChanges = false;
 
-    document.getElementById('configForm').addEventListener('change', function(e) {{
-        hasChanges = true;
-    }});
+    document.getElementById('configForm').addEventListener('input', function(e) {{ hasChanges = true; }}, true);
+    document.getElementById('configForm').addEventListener('change', function(e) {{ hasChanges = true; }}, true);
 
     window.addEventListener('beforeunload', function(e) {{
         if (hasChanges) {{
@@ -520,17 +972,12 @@ def generate_config_page():
         }}
     }});
 
-    // Reset flag after save or import
     var params = new URLSearchParams(window.location.search);
     if (params.get('saved') === '1' || params.get('imported') === '1') {{
         hasChanges = false;
     }}
 }})();
-if (window.location.search.includes('imported=1')) {{
-    alert('Configuration imported successfully!');
-}} else if (window.location.search.includes('saved=1')) {{
-    alert('Configuration saved!');
-}}
+
 </script>
 </body>
 </html>
@@ -623,6 +1070,57 @@ def update_rtc_time():
         loop_time_set -= 1
     return
 
+def reconfigure_camera():
+    """Reconfigure the camera with the current ROTATION setting.
+
+    Called from /save_config when rotation changes. Stops recording,
+    recomputes WIDTH/HEIGHT and transform, then restarts recording.
+    """
+    global picam2, WIDTH, HEIGHT, transform
+
+    if picam2 is None:
+        print("Camera not initialised — cannot reconfigure")
+        return
+
+    old_rotation = ROTATION
+    new_rotation = int(globals().get('rotation', '0'))
+
+    if new_rotation not in (0, 90, 180, 270):
+        print(f"Invalid rotation {new_rotation} — keeping current")
+        return
+
+    if new_rotation == old_rotation:
+        return
+
+    print(f"Reconfiguring camera: {old_rotation}° -> {new_rotation}°")
+    picam2.stop_recording()
+
+    # Recalculate dimensions (swap for 90/270)
+    if new_rotation in (90, 270):
+        WIDTH, HEIGHT = NATIVE_SIZE[1], NATIVE_SIZE[0]
+    else:
+        WIDTH, HEIGHT = NATIVE_SIZE
+
+    # Build new transform
+    if new_rotation == 0:
+        transform = Transform()
+    elif new_rotation == 180:
+        transform = Transform(hflip=1, vflip=1)
+    elif new_rotation == 90:
+        transform = Transform(vflip=1)
+    elif new_rotation == 270:
+        transform = Transform(hflip=1)
+
+    config = picam2.create_video_configuration(
+        main={"size": (WIDTH, HEIGHT)},
+        transform=transform
+    )
+    picam2.configure(config)
+    picam2.start_recording(JpegEncoder(q=60), FileOutput(output))
+
+    print(f"Camera reconfigured: {WIDTH}x{HEIGHT}, rotated {new_rotation}°")
+
+
 # Flask app setup
 app = Flask(__name__)
 
@@ -665,6 +1163,16 @@ def save_config_route():
 
     old_port = globals().get('camera_port', '8000')
     new_port = config_key_value.get('camera_port', old_port)
+    old_rotation = int(globals().get('rotation', '0'))
+    new_rotation_str = config_key_value.get('rotation', str(old_rotation))
+    old_first_image_delay = globals().get('time_before_first_image', '0')
+    new_first_image_delay = config_key_value.get('time_before_first_image', old_first_image_delay)
+    old_image_delay = globals().get('time_before_image', '10')
+    new_image_delay = config_key_value.get('time_before_image', old_image_delay)
+
+    # Only validate transfer fields if the transfer tab is being saved
+    active_tab = config_key_value.get('_active_tab', 'camera')
+    is_transfer_tab = active_tab == 'transfer'
 
     error_text = """"""
     for key, value in config_key_value.items():
@@ -676,6 +1184,9 @@ def save_config_route():
         elif key == "time_before_image":
             if not value.isnumeric():
                 error_text += f"Invalid time_before_image: {value}\n"
+        elif key == "time_before_first_image":
+            if not value.isnumeric():
+                error_text += f"Invalid time_before_first_image: {value}\n"
         elif key == "output_width":
             if not value.isnumeric():
                 error_text += f"Invalid output_width: {value}\n"
@@ -691,26 +1202,36 @@ def save_config_route():
         elif key == "camera_port":
             if not value.isnumeric() or not 1 <= int(value) <= 65535:
                 error_text += f"Invalid camera_port: {value}\n"
+        elif key == "ftp-server":
+            if is_transfer_tab and value in ('ftp_server', 'ftp_server2', 'camera_url', ''):
+                error_text += f"Invalid ftp-server: {value}. Please enter a valid server hostname or IP address.\n"
+        elif key == "archive_retention_days":
+            if not value.isnumeric() or int(value) < 1:
+                error_text += f"Invalid archive_retention_days: {value}. Must be a positive integer.\n"
+        elif key == "reserved_space_gb":
+            if not value.replace('.', '', 1).isnumeric() or float(value) < 0.5:
+                error_text += f"Invalid reserved_space_gb: {value}. Must be at least 0.5.\n"
 
     if len(error_text) > 0:
         return error_text, 400
     else:
         save_config(config_key_value)
+        if old_first_image_delay != new_first_image_delay:
+            print(f"time_before_first_image changed from {old_first_image_delay} to {new_first_image_delay} — signaling background capture to restart timer...")
+            restart = globals().get('_bg_restart_event')
+            if restart is not None:
+                restart.set()
+        if old_image_delay != new_image_delay:
+            print(f"time_before_image changed from {old_image_delay} to {new_image_delay} — signaling background capture...")
+            restart = globals().get('_bg_restart_event')
+            if restart is not None:
+                restart.set()
+        if int(new_rotation_str) != old_rotation:
+            reconfigure_camera()
         if new_port != old_port:
             print(f"Port changed from {old_port} to {new_port} — restarting server...")
             os.execv(sys.executable, [sys.executable] + sys.argv + ['--restart-port', new_port])
-        return redirect('/config.html?saved=1')
-
-    # print(config_key_value)
-    # for key, value in config_key_value.items():
-    #     print(key, value)
-    # exit(0)
-    # if rotation in (0, 90, 180, 270):
-    #     save_config(rotation)
-    #     return redirect('/config.html?saved=1')
-    # else:
-    #     return "Invalid rotation", 400
-    return config_key_value
+        return '', 200
 
 
 @app.route('/export_config')
@@ -742,11 +1263,200 @@ def import_config():
         _cfg.read(CONFIG_FILE)
         if _cfg.has_section('camera'):
             for key, value in _cfg.items('camera'):
+                # Convert 'True'/'False' strings to booleans
+                if key in ('embed_timestamp', 'embed_camera_name', 'camera_daylight_savings'):
+                    if value == 'True':
+                        value = True
+                    elif value == 'False':
+                        value = False
                 globals()[key] = value
-        globals().update(dict(_cfg.items('camera')))
+        globals().update({k: v for k, v in _cfg.items('camera')
+                         if k not in ('embed_timestamp', 'embed_camera_name', 'camera_daylight_savings')})
+        # Restart if port changed
+        new_port = _cfg.get('camera', 'camera_port', fallback='8000')
+        if new_port and new_port != str(globals().get('camera_port', '8000')):
+            globals()['camera_port'] = new_port
+            print(f"Port changed from {globals().get('camera_port', '8000')} to {new_port} — restarting server...")
+            os.execv(sys.executable, [sys.executable] + sys.argv + ['--restart-port', new_port])
         return redirect('/config.html?imported=1')
     except Exception as e:
         return f'Error importing config: {e}', 500
+
+
+def test_ftp_connection(server, port, username, password):
+    """Test an FTP connection and return (success, message)."""
+    import ftplib
+    try:
+        ftp = ftplib.FTP(server, port)
+        ftp.login(username, password)
+        ftp.quit()
+        return True, f"Connected to {server}:{port} as {username}"
+    except Exception as ex:
+        return False, f"FTP failed: {ex}"
+
+
+def test_sftp_connection(server, port, username, password):
+    """Test an SFTP connection and return (success, message)."""
+    import paramiko
+    try:
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(hostname=server, port=int(port), username=username, password=password, timeout=10)
+        ssh.close()
+        return True, f"Connected to {server}:{port} as {username}"
+    except Exception as ex:
+        return False, f"SFTP failed: {ex}"
+
+
+@app.route('/test_connection', methods=['POST'])
+def test_connection():
+    """Test FTP/SFTP connection with the provided settings."""
+    ftmode = request.form.get('ftp-mode', 'sftp').lower()
+    server = request.form.get('ftp-server', '')
+    port = request.form.get('ftp-port', '22')
+    username = request.form.get('ftp-username', '')
+    password = request.form.get('ftp-password', '')
+
+    if not all([server, username]):
+        return 'Missing server or username', 400
+
+    print(f"Testing {ftmode.upper()} connection to {server}:{port} as {username}")
+    if ftmode == 'sftp':
+        ok, msg = test_sftp_connection(server, port, username, password)
+    else:
+        ok, msg = test_ftp_connection(server, port, username, password)
+
+    status = 'ok' if ok else 'error'
+    return f'{{"status":"{status}","message":"{msg}"}}', 200 if ok else 400, {'Content-Type': 'application/json'}
+
+
+def _cleanup_images_throttled():
+    """Run cleanup only if more than 300s have passed since last check."""
+    last = globals().get('_last_cleanup_time', 0)
+    now = time.time()
+    if now - last < 300:
+        return
+    globals()['_last_cleanup_time'] = now
+    result = cleanup_images()
+    if result['deleted'] > 0:
+        print(f"Auto-cleanup: {result['deleted']} image(s) deleted, {result['freed_bytes']/(1024*1024):.1f} MB freed.")
+
+
+def cleanup_images():
+    """
+    Clean up image files in the output folder.
+    1. Hard limit: always keep at least 10% of the drive free
+    2. Respect the user's reserved_space_gb setting
+    3. Delete oldest files first
+    4. Never delete files newer than archive_retention_days
+    """
+    script_dir = os.path.dirname(__file__)
+    output_dir = os.path.join(script_dir, globals().get('output_folder', 'image_dir'))
+    if not os.path.isdir(output_dir):
+        return {'deleted': 0, 'freed_bytes': 0, 'reason': 'no output dir'}
+
+    retention_days = max(int(globals().get('archive_retention_days', '30')), 1)
+    reserved_gb = max(float(globals().get('reserved_space_gb', '5')), 1)
+
+    usage = shutil.disk_usage(output_dir)
+    total = usage.total
+    free = usage.free
+
+    # Hard limit: always keep 10% free
+    hard_limit_free = total * 0.10
+    # User setting: always keep at least reserved_gb free
+    effective_free_target = max(hard_limit_free, reserved_gb * (1024 ** 3))
+
+    if free >= effective_free_target:
+        return {'deleted': 0, 'freed_bytes': 0, 'reason': 'enough space'}
+
+    # We need to free up space. Calculate how much.
+    space_to_free = free - effective_free_target  # negative means we're over budget
+    if space_to_free >= 0:
+        return {'deleted': 0, 'freed_bytes': 0, 'reason': 'enough space'}
+
+    bytes_to_free = abs(space_to_free)
+
+    # Gather image files with their age and size
+    now = time.time()
+    retention_seconds = retention_days * 86400
+    eligible_files = []
+
+    for fname in os.listdir(output_dir):
+        fpath = os.path.join(output_dir, fname)
+        if not os.path.isfile(fpath):
+            continue
+        ext = os.path.splitext(fname)[1].lower()
+        if ext not in ('.jpg', '.jpeg', '.png'):
+            continue
+        try:
+            mtime = os.path.getmtime(fpath)
+            age = now - mtime
+            if age < retention_seconds:
+                continue  # Don't delete files within retention period
+            fsize = os.path.getsize(fpath)
+            eligible_files.append((fpath, fname, mtime, age, fsize))
+        except OSError:
+            continue
+
+    # Sort by age descending (oldest first)
+    eligible_files.sort(key=lambda x: x[3], reverse=True)
+
+    deleted = 0
+    freed = 0
+
+    for fpath, fname, mtime, age, fsize in eligible_files:
+        if freed >= bytes_to_free:
+            break
+        try:
+            os.remove(fpath)
+            deleted += 1
+            freed += fsize
+            print(f"Archive cleanup: deleted {fname} (age: {age/86400:.1f}d, size: {fsize/(1024*1024):.1f}MB)")
+        except OSError as ex:
+            print(f"Archive cleanup: failed to delete {fname}: {ex}")
+
+    return {'deleted': deleted, 'freed_bytes': freed, 'reason': 'cleanup triggered'}
+
+
+@app.route('/cleanup_disk')
+def cleanup_disk():
+    """Trigger disk cleanup and return results as JSON."""
+    result = cleanup_images()
+    return '{{"deleted":{d},"freed_bytes":{f},"reason":"{r}"}}'.format(
+        d=result['deleted'], f=result['freed_bytes'], r=result['reason']
+    ), 200, {'Content-Type': 'application/json'}
+
+
+@app.route('/disk_usage')
+def disk_usage():
+    """Return disk usage info for the output folder."""
+    script_dir = os.path.dirname(__file__)
+    output_dir = os.path.join(script_dir, globals().get('output_folder', 'image_dir'))
+    usage = shutil.disk_usage(output_dir)
+    used_gb = usage.used / (1024**3)
+    free_gb = usage.free / (1024**3)
+    total_gb = usage.total / (1024**3)
+    pct = (usage.used / usage.total * 100) if usage.total > 0 else 0
+
+    # Count total images and total archive size
+    total_images = 0
+    archive_images = 0
+    if os.path.isdir(output_dir):
+        now = time.time()
+        retention_days = max(int(globals().get('archive_retention_days', '30')), 1)
+        retention_seconds = retention_days * 86400
+        for fname in os.listdir(output_dir):
+            if os.path.splitext(fname)[1].lower() in ('.jpg', '.jpeg', '.png'):
+                total_images += 1
+                mtime = os.path.getmtime(os.path.join(output_dir, fname))
+                if now - mtime >= retention_seconds:
+                    archive_images += 1
+
+    return '{{"total_gb":{total_gb:.1f},"used_gb":{used_gb:.1f},"free_gb":{free_gb:.1f},"percent":{pct:.0f},"total_images":{total_images},"archive_images":{archive_images}}}'.format(
+        total_gb=total_gb, used_gb=used_gb, free_gb=free_gb, pct=pct,
+        total_images=total_images, archive_images=archive_images
+    ), 200, {'Content-Type': 'application/json'}
 
 
 def _bool_val(key):
@@ -792,23 +1502,29 @@ def file_date_string():
 def capture_embedded_photo():
     """Capture a single high-quality JPEG still from the camera, with embedded text."""
     print("""Capture a single high-quality JPEG still from the camera, with embedded text.""")
+    _cleanup_images_throttled()
+    script_dir = os.path.dirname(__file__)
+    file_prefix = globals().get('file_name', globals()['camera_name'])
     photo_buffer = BytesIO()
     picam2.capture_file(photo_buffer, name="main", format="jpeg")
     photo_buffer.seek(0)
 
     background = Image.open(photo_buffer)
     img_text = create_embed_text()
-    background.paste(img_text, (0, 0))
+    if img_text is not None:
+        background.paste(img_text, (0, 0))
 
     output_buffer = BytesIO()
     background.save(output_buffer, format="jpeg", quality=100)
     output_buffer.seek(0)
     destination = ""
-    file_name = f"{globals()['output_folder']}/{globals()['camera_name']}_{file_date_string()}.jpg"
+    output_dir = os.path.join(script_dir, globals().get('output_folder', 'image_dir'))
+    os.makedirs(output_dir, exist_ok=True)
+    file_name = os.path.join(output_dir, f"{file_prefix}_{file_date_string()}.jpg")
     for dest in globals()['ftp-destination'].split(','):
         if dest.endswith('/'):
             destination = dest[:-1]
-            destination = f"{destination}/{globals()['camera_name']}_{file_date_string()}.jpg"
+            destination = f"{destination}/{file_prefix}_{file_date_string()}.jpg"
         else:
             destination = f"{dest}"
 
@@ -835,18 +1551,51 @@ def capture_embedded_photo():
     return Response(output_buffer.getvalue(), mimetype='image/jpeg')
 
 def background_capture_task(delay):
+    restart_event = globals().get('_bg_restart_event')
+    first = True
     while True:
         try:
+            # If delay > 0, apply the configured delay
             if delay > 0:
-                total_delayed = 0
-                print(f"Background thread sleeping for {delay} seconds...")
-                # Every 10 seconds in the delay we're going to print something so that
-                # we can see the logs as they're delaying
-                while total_delayed < delay:
-                    time.sleep(1)
-                    total_delayed += 1
-                    if total_delayed % 10 == 0:
-                        print(f"Background thread sleeping for {delay} seconds... {total_delayed} seconds elapsed.")
+                # Check for restart signal (time_before_first_image changed)
+                if restart_event is not None and first and restart_event.is_set():
+                    restart_event.clear()
+                    print(f"Background capture: restarting timer (new time_before_first_image)...")
+
+                # Use time_before_first_image on the first capture, then time_before_image
+                if first:
+                    wait = int(globals().get('time_before_first_image', '0'))
+                    if wait > 0:
+                        print(f"Waiting {wait}s before first capture...")
+                        total = 0
+                        while total < wait:
+                            if restart_event is not None and restart_event.is_set():
+                                print("Background capture: config changed, restarting wait...")
+                                restart_event.clear()
+                                total = 0
+                                wait = int(globals().get('time_before_first_image', '0'))
+                                if wait > 0:
+                                    print(f"Restarted: waiting {wait}s before first capture...")
+                                continue
+                            time.sleep(1)
+                            total += 1
+                            if total % 10 == 0:
+                                print(f"Waiting {wait - total}s before first capture...")
+                    first = False
+                else:
+                    total_delayed = 0
+                    while total_delayed < delay:
+                        if restart_event is not None and restart_event.is_set():
+                            print("Background capture: config changed, restarting...")
+                            restart_event.clear()
+                            total_delayed = 0
+                            first = True
+                            delay = int(globals().get('time_before_image', '10'))
+                            continue
+                        time.sleep(1)
+                        total_delayed += 1
+                        if total_delayed % 10 == 0:
+                            print(f"Background thread sleeping for {total_delayed} seconds...")
             capture_embedded_photo()
         except Exception as ex:
             print("Error in background thread.")
@@ -861,13 +1610,15 @@ def create_embed_text():
     Enhance with the path that the file should be saved to so that images aren't in the
     root folder.
     """
-    camera_name = globals()['camera_name']
     script_dir = os.path.dirname(__file__)
-    if len(globals()['embed_timestamp']) > 2:
-        camera_name = globals()['camera_name'] + ' - ' + cam_time()
+    camera_name = globals()['camera_name'] if globals().get('embed_camera_name') is True else ''
+    if globals().get('embed_timestamp') is True:
+        camera_name = camera_name + (' - ' if camera_name else '') + cam_time()
+    unicode_text = camera_name
+    if not unicode_text:
+        return None
 
     # sample text and font
-    unicode_text = camera_name
     # font_path = f'{self.script_dir}/fonts/AmazeFont.otf'
     font_path = f'{script_dir}/fonts/AmazeFont.otf'
 
@@ -933,8 +1684,9 @@ if __name__ == '__main__':
     print(f"Streaming rotated {ROTATION}° video at {WIDTH}x{HEIGHT}")
     print("New: Fullscreen view at /full.html")
     print("Capture: Button on index page saves/displays latest photo")
-    print("Config: Set rotation at /config.html (restart server to apply)")
+    print("Config: Set rotation at /config.html (applies immediately)")
 
+    globals()['_bg_restart_event'] = Event()
     thread = Thread(target=background_capture_task, args=(int(globals()['time_before_image']),), daemon=True)
     thread.start()
     try:
