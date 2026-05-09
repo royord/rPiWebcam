@@ -1272,6 +1272,12 @@ def import_config():
                 globals()[key] = value
         globals().update({k: v for k, v in _cfg.items('camera')
                          if k not in ('embed_timestamp', 'embed_camera_name', 'camera_daylight_savings')})
+        # Restart if port changed
+        new_port = _cfg.get('camera', 'camera_port', fallback='8000')
+        if new_port and new_port != str(globals().get('camera_port', '8000')):
+            globals()['camera_port'] = new_port
+            print(f"Port changed from {globals().get('camera_port', '8000')} to {new_port} — restarting server...")
+            os.execv(sys.executable, [sys.executable] + sys.argv + ['--restart-port', new_port])
         return redirect('/config.html?imported=1')
     except Exception as e:
         return f'Error importing config: {e}', 500
@@ -1498,13 +1504,15 @@ def capture_embedded_photo():
     print("""Capture a single high-quality JPEG still from the camera, with embedded text.""")
     _cleanup_images_throttled()
     script_dir = os.path.dirname(__file__)
+    file_prefix = globals().get('file_name', globals()['camera_name'])
     photo_buffer = BytesIO()
     picam2.capture_file(photo_buffer, name="main", format="jpeg")
     photo_buffer.seek(0)
 
     background = Image.open(photo_buffer)
     img_text = create_embed_text()
-    background.paste(img_text, (0, 0))
+    if img_text is not None:
+        background.paste(img_text, (0, 0))
 
     output_buffer = BytesIO()
     background.save(output_buffer, format="jpeg", quality=100)
@@ -1512,11 +1520,11 @@ def capture_embedded_photo():
     destination = ""
     output_dir = os.path.join(script_dir, globals().get('output_folder', 'image_dir'))
     os.makedirs(output_dir, exist_ok=True)
-    file_name = os.path.join(output_dir, f"{globals()['camera_name']}_{file_date_string()}.jpg")
+    file_name = os.path.join(output_dir, f"{file_prefix}_{file_date_string()}.jpg")
     for dest in globals()['ftp-destination'].split(','):
         if dest.endswith('/'):
             destination = dest[:-1]
-            destination = f"{destination}/{globals()['camera_name']}_{file_date_string()}.jpg"
+            destination = f"{destination}/{file_prefix}_{file_date_string()}.jpg"
         else:
             destination = f"{dest}"
 
@@ -1608,8 +1616,7 @@ def create_embed_text():
         camera_name = camera_name + (' - ' if camera_name else '') + cam_time()
     unicode_text = camera_name
     if not unicode_text:
-        # Return an empty canvas if nothing to draw
-        return Image.new('RGB', (1, 1), 'transparent')
+        return None
 
     # sample text and font
     # font_path = f'{self.script_dir}/fonts/AmazeFont.otf'
