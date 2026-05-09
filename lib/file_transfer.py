@@ -167,6 +167,8 @@ class FileTransfer:
             f"""pass: {self.password}\n"""
             f"""dest: {self.destination}\n"""
         )
+        ssh_ob = None
+        ftp_client = None
         try:
             ssh_ob = SSHClient()
             # ssh_ob.load_system_host_keys()
@@ -193,8 +195,9 @@ class FileTransfer:
             print("Couldn't connect to SCP site.")
             print(ex)
             return False
-        print("Unsplit self.destination: ", self.destination)
+
         try:
+            print("Unsplit self.destination: ", self.destination)
             if self.destination != ".":
                 try:
                     dest_list = self.destination.split("/")
@@ -229,15 +232,13 @@ class FileTransfer:
                 print("destination: ", destination)
                 print(ex)
                 return False
+
+            return True
         except Exception as ex:
             self.error = str(ex)
             return False
-        # try:
-        #     ftp_client.put(self.file, self.destination)
-        # except Exception as ex:
-        #     print("Transfer unsuccessful.")
-        #     print(ex)
-        #     return False
-        ftp_client.close()
-
-        return True
+        finally:
+            if ftp_client is not None:
+                ftp_client.close()
+            if ssh_ob is not None:
+                ssh_ob.close()
