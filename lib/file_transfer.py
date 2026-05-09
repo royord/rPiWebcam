@@ -20,6 +20,10 @@ class FileTransfer:
         self.ftmode = ftmode.lower()
         self.file = file
         self.destination = destination
+        self.success = False
+        self.error = ""
+        self.elapsed_seconds = 0
+
         if self.destination.endswith("/"):
             self.destination = self.destination[:-1]
         if self.destination.startswith("./"):
@@ -36,14 +40,23 @@ class FileTransfer:
         else:
             self.ftpport = ftpport
 
-        if self.ftmode == "sftp":
-            print("SFTP")
-            self.scp_file()
-        else:
-            print("FTP")
-            self.ftp_file()
+        transfer_started_at = time.monotonic()
+        try:
+            if self.ftmode == "sftp":
+                print("SFTP")
+                self.success = self.scp_file()
+            else:
+                print("FTP")
+                self.success = self.ftp_file()
+        except Exception as ex:
+            self.success = False
+            self.error = str(ex)
+            print("Unhandled transfer exception")
+            print(ex)
+        finally:
+            self.elapsed_seconds = time.monotonic() - transfer_started_at
         pass
-    
+
     def transfer(self, ftp, file):
         """
         Transfers to the ftp the file
@@ -108,20 +121,27 @@ class FileTransfer:
     def ftp_file(self):
         try:
             print("ftp")
-            ftp = ftplib.FTP(self.ftpserver, self.ftpport)
-            ftp.login(self.ftpuser, self.password)
-            # upload(ftp, "README.nluug")
-            # upload(ftp, self.file)
-            ftp.storbinary()
-            ext = os.path.splitext(self.file)[1]
+            ftp = ftplib.FTP()
+            ftp.connect(self.ftpserver, int(self.ftpport), timeout=15)
+            ftp.login(self.username, self.password)
+
+            remote_name = os.path.basename(self.destination)
+            ext = os.path.splitext(self.file)[1].lower()
+
             if ext in (".txt", ".htm", ".html"):
-                ftp.storlines("STOR " + self.file, open(self.file))
+                with open(self.file, "r") as f:
+                    ftp.storlines("STOR " + remote_name, f)
             else:
-                ftp.storbinary("STOR " + self.file, open(self.file, "rb"), 1024)
+                with open(self.file, "rb") as f:
+                    ftp.storbinary("STOR " + remote_name, f, 1024)
+
+            ftp.quit()
+            return True
         except Exception as ex:
+            self.error = str(ex)
             print("FTP Transfer Failure")
+            print(ex)
             return False
-        return
 
     def scp_file(self):
         """
@@ -152,13 +172,24 @@ class FileTransfer:
             # ssh_ob.load_system_host_keys()
             ssh_ob.set_missing_host_key_policy(AutoAddPolicy())
             # ssh_ob.set_missing_host_key_policy(WarningPolicy())
-            ssh_ob.connect(hostname=self.ftpserver, port=self.ftpport, username=self.username, password=self.password)
+            ssh_ob.connect(
+                hostname=self.ftpserver,
+                port=int(self.ftpport),
+                username=self.username,
+                password=self.password,
+                timeout=15,
+                banner_timeout=15,
+                auth_timeout=15,
+                look_for_keys=False,
+                allow_agent=False,
+            )
             # ftp_client = ssh_ob.open_sftp()
             # ftp_client = scp.SCPClient(ssh_ob.get_transport())
             # ftp_client = ssh
             ftp_client = paramiko.SFTPClient.from_transport(ssh_ob.get_transport())
             # transfer_val = False
         except Exception as ex:
+            self.error = str(ex)
             print("Couldn't connect to SCP site.")
             print(ex)
             return False
@@ -192,12 +223,14 @@ class FileTransfer:
             try:
                 ftp_client.put(self.file, destination)
             except Exception as ex:
+                self.error = str(ex)
                 print("Transfer unsuccessful.")
                 print("self.file: ", self.file)
                 print("destination: ", destination)
                 print(ex)
                 return False
         except Exception as ex:
+            self.error = str(ex)
             return False
         # try:
         #     ftp_client.put(self.file, self.destination)
