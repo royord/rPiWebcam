@@ -2027,8 +2027,14 @@ if __name__ == '__main__':
     print("Config: Set rotation at /config.html (applies immediately)")
 
     globals()['_bg_restart_event'] = Event()
-    thread = Thread(target=background_capture_task, args=(int(globals()['time_before_image']),), daemon=True)
-    thread.start()
+    capture_mode = globals().get('capture_mode', 'interval')
+    if capture_mode == 'interval':
+        thread = Thread(target=background_capture_task, args=(int(globals()['time_before_image']),), daemon=True)
+        thread.start()
+    else:
+        scheduler = UnifiedScheduler(globals()['_bg_restart_event'])
+        thread = Thread(target=scheduler_loop, args=(scheduler,), daemon=True)
+        thread.start()
     try:
         app.run(host='0.0.0.0', port=int(globals()['camera_port']), threaded=True, use_reloader=False)
     finally:
