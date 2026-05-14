@@ -9,12 +9,14 @@
 # Supports rotation via libcamera Transform.
 # Fix: Simplified get_max_video_size() to handle SensorMode dict structure; removed format description access to avoid AttributeError (format is str, not dict with 'description').
 
+import html
 import io
 import logging
 import configparser
 import json
 import os
 import shutil
+import subprocess
 import time
 from datetime import datetime, timedelta
 from threading import Condition, Thread, Event
@@ -75,7 +77,9 @@ default_config = {
     'camera_timezone': 'camera_timezone',
     'camera_daylight_savings': 'camera_daylight_savings',
     'camera_port': '8000',
-    'camera_url': 'camera_urls'
+    'camera_url': 'camera_urls',
+    'rtc_error_count': '0',
+    'rtc_last_error': 'Never'
 }
 
 def load_config():
@@ -199,9 +203,9 @@ if ROTATION == 0:
 elif ROTATION == 180:
     transform = Transform(hflip=1, vflip=1)
 elif ROTATION == 90:
-    transform = Transform(vflip=1)
+    transform = Transform(transpose=1, vflip=1)
 elif ROTATION == 270:
-    transform = Transform(hflip=1)
+    transform = Transform(transpose=1, hflip=1)
 else:
     raise ValueError("Unsupported rotation; use 0, 90, 180, or 270")
 
@@ -387,6 +391,8 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
 
 <form id="configForm" method="POST" action="/save_config">
     <input type="hidden" name="_active_tab" id="_active_tab" value="camera">
+    <input type="hidden" name="rtc_error_count" id="rtc_error_count" value="{globals().get('rtc_error_count', '0')}">
+    <input type="hidden" name="rtc_last_error" id="rtc_last_error" value="{globals().get('rtc_last_error', 'Never')}">
 
 <!-- Two-pane layout -->
 <div class="two-pane">
@@ -518,7 +524,7 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
         </select>
     </div>
 
-    <input type="hidden" name="timed_schedule" id="timed_schedule" value="{globals()['timed_schedule']}">
+    <input type="hidden" name="timed_schedule" id="timed_schedule" value="{html.escape(str(globals().get('timed_schedule', '[]')), quote=True)}">
 
     <!-- Interval fields -->
     <div id="interval-fields">
@@ -571,6 +577,12 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
                 <input type="number" name="lon" id="lon" value="{globals().get('lon', '-0.1')}" step="0.0001" min="-180" max="180">
             </div>
         </div>
+    </div>
+
+    <!-- RTC Warning Banner -->
+    <div id="rtc-warning" style="display:none; background:#fff3cd; color:#856404; border:1px solid #ffc107; border-radius:6px; padding:12px 16px; margin-top:12px; font-size:14px;">
+        <div style="font-weight:bold;">⚠ RTC Warning</div>
+        <div id="rtc-warning-msg"></div>
     </div>
 </div>
 
@@ -1181,6 +1193,29 @@ function serializeTimedEntries() {{
     }}
 }})();
 
+// RTC warning: poll /rtc_status and show/hide banner
+(function() {{
+    function updateRtcWarning() {{
+        fetch('/rtc_status')
+            .then(function(r) {{ return r.json(); }})
+            .then(function(data) {{
+                var banner = document.getElementById('rtc-warning');
+                var msg = document.getElementById('rtc-warning-msg');
+                if (!banner || !msg) return;
+                if (data.has_warning) {{
+                    msg.textContent = 'The battery/RTC may need to be replaced. RTC update on ' + data.last_error + ' found the RTC >2 hours out of date. Error count: ' + data.error_count;
+                    banner.style.display = 'block';
+                }} else {{
+                    banner.style.display = 'none';
+                }}
+            }})
+            .catch(function() {{}});  // Ignore errors (no RTC, server error, etc.)
+    }}
+    // Poll on load, then every 15 minutes
+    updateRtcWarning();
+    setInterval(updateRtcWarning, 15 * 60 * 1000);
+}})();
+
 </script>
 </body>
 </html>
@@ -1229,7 +1264,8 @@ def get_interface_ip():
 
 
 def update_rtc_time():
-    """Update the hardware clock from the internet via timedatectl."""
+    """Update the hardware clock from the internet via timedatectl.
+    Detects if RTC is >2 hours behind and tracks errors."""
     # Throttle: don't sync more than once per hour
     last = globals().get('_last_time_sync', 0)
     now = time.time()
@@ -1247,11 +1283,44 @@ def update_rtc_time():
             os.system("sudo systemctl restart systemd-timesyncd 2>/dev/null")
         # Wait for systemd to sync, then write to hwclock
         time.sleep(3)
+
+        # Before writing, read the current RTC time and compare with system time
+        rtc_drift_detected = False
+        try:
+            r = subprocess.run(['sudo', 'hwclock', '-r'], capture_output=True, text=True, timeout=10)
+            if r.returncode == 0:
+                rtc_line = r.stdout.strip().split('\n')[-1].strip()
+                # hwclock -r output: "Wed 14 May 2025 10:30:00 AM UTC" or similar
+                # Try multiple formats
+                for fmt in ('%a %d %b %Y %I:%M:%S %p %Z', '%a %b %d %H:%M:%S %Z %Y',
+                            '%a %b %d %H:%M:%S UTC %Y', '%a %b %d %H:%M:%S %Y'):
+                    try:
+                        rtc_time = datetime.strptime(rtc_line, fmt)
+                        sys_time = datetime.now()
+                        drift = abs((sys_time - rtc_time).total_seconds())
+                        if drift > 7200:
+                            # RTC error tracking
+                            err_count = int(globals().get('rtc_error_count', 0)) + 1
+                            globals()['rtc_error_count'] = str(err_count)
+                            globals()['rtc_last_error'] = sys_time.strftime('%Y-%m-%d %H:%M:%S')
+                            print(f"RTC drift detected: {drift:.0f}s ({drift/3600:.1f}h) — error #{err_count}")
+                            rtc_drift_detected = True
+                        else:
+                            print(f"RTC drift: {drift:.0f}s — OK")
+                        break
+                    except ValueError:
+                        continue
+        except Exception:
+            pass  # No RTC or hwclock error, skip drift check
+
         result = os.system("sudo hwclock -w 2>/dev/null")
         if result == 0:
             print("Hardware clock updated")
         else:
             print("hwclock -w failed (no RTC hardware?)")
+
+        if rtc_drift_detected:
+            print("WARNING: RTC battery may be dead or failing — RTC was >2 hours behind system time")
     except Exception as ex:
         print(f"Time sync error: {ex}")
 
@@ -1593,7 +1662,13 @@ def save_config_route():
     if len(error_text) > 0:
         return error_text, 400
     else:
-        save_config(config_key_value)
+        try:
+            save_config(config_key_value)
+        except Exception as e:
+            print(f"save_config error: {e}")
+            import traceback
+            traceback.print_exc()
+            return f"Error saving config: {e}", 500
         if old_first_image_delay != new_first_image_delay:
             print(f"time_before_first_image changed from {old_first_image_delay} to {new_first_image_delay} — signaling background capture to restart timer...")
             restart = globals().get('_bg_restart_event')
@@ -1615,6 +1690,16 @@ def save_config_route():
             print(f"Port changed from {old_port} to {new_port} — restarting server...")
             os.execv(sys.executable, [sys.executable] + sys.argv + ['--restart-port', new_port])
         return '', 200
+
+
+@app.route('/rtc_status')
+def rtc_status():
+    """Return RTC error status as JSON."""
+    return {
+        'error_count': int(globals().get('rtc_error_count', 0)),
+        'last_error': globals().get('rtc_last_error', 'Never'),
+        'has_warning': int(globals().get('rtc_error_count', 0)) > 0
+    }
 
 
 @app.route('/export_config')
