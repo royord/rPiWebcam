@@ -1,0 +1,46 @@
+<html>
+<head>
+<title>picamera2 MJPEG streaming demo</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+h1 { margin: 0 0 16px; font-size: 20px; color: #333; }
+.stream-box { background: #000; border-radius: 8px; overflow: hidden; max-width: 720px; }
+.stream-box img { width: 100%; display: block; }
+.controls { max-width: 720px; margin: 12px 0; display: flex; gap: 8px; flex-wrap: wrap; }
+.controls a, .controls button {
+    padding: 8px 16px; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; text-decoration: none; color: #fff;
+}
+.controls button { background: #007bff; }
+.controls a { background: #6c757d; }
+#photo { display: none; max-width: 720px; margin-top: 12px; border-radius: 8px; }
+</style>
+</head>
+<body>
+<h1>picamera2 MJPEG Streaming (Rotated {{ rotation }}&#176;)</h1>
+<div class="stream-box">
+    <img src="/stream.mjpg" />
+</div>
+<div class="controls">
+    <button id="captureBtn">Capture Photo</button>
+    <button id="captureEmbeddedBtn">Capture with Text</button>
+    <a href="/full.html">Fullscreen</a>
+    <a href="/config.html">Configure Settings</a>
+</div>
+<img id="photo" />
+<script>
+document.getElementById('captureBtn').onclick = function() {
+    const photoImg = document.getElementById('photo');
+    photoImg.src = '/capture.jpg?' + Date.now();
+    photoImg.style.display = 'block';
+};
+document.getElementById('captureEmbeddedBtn').onclick = function() {
+    const photoImg = document.getElementById('photo');
+    photoImg.src = '/capture_embedded.jpg?' + Date.now();
+    photoImg.style.display = 'block';
+};
+if (window.location.search.includes('saved=1')) {
+    alert('Configuration saved!');
+}
+</script>
+</body>
+</html>

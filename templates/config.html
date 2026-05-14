@@ -1,0 +1,605 @@
+<html>
+<head>
+<title>Camera Configuration</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+h1 { margin: 0 0 20px; font-size: 22px; color: #333; }
+.two-pane { display: flex; gap: 20px; align-items: flex-start; }
+.live-pane {
+    flex: 0 0 640px; position: sticky; top: 20px;
+}
+.settings-pane {
+    flex: 1; min-width: 0;
+}
+.pane-label {
+    font-size: 13px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+.tab-btns { display: flex; gap: 0; border-bottom: 2px solid #dee2e6; background: #fff; margin-bottom: 20px; }
+.tab-btn {
+    padding: 10px 24px; border: none; background: none; font-size: 15px; cursor: pointer;
+    color: #666; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all .15s;
+}
+.tab-btn:hover { color: #007bff; }
+.tab-btn.active { color: #007bff; border-bottom-color: #007bff; font-weight: 500; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.field { margin-bottom: 16px; }
+.field label { display: block; font-size: 13px; font-weight: 500; color: #555; margin-bottom: 4px; }
+.field input[type="text"],
+.field input[type="password"],
+.field input[type="number"],
+.field select {
+    width: 100%; max-width: 400px; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px;
+    font-size: 14px; box-sizing: border-box;
+}
+.field input:focus, .field select:focus { outline: none; border-color: #007bff; box-shadow: 0 0 0 2px rgba(0,123,255,.15); }
+.field select { background: #fff; }
+.field .hint { font-size: 12px; color: #888; margin-top: 4px; max-width: 400px; }
+.section-title { font-size: 16px; font-weight: 600; color: #333; margin: 24px 0 16px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
+.section-title:first-child { margin-top: 0; }
+.storage-gauge { margin: 16px 0; padding: 16px; background: #f8f9fa; border-radius: 8px; }
+.storage-bar { height: 24px; border-radius: 12px; background: #e9ecef; overflow: hidden; position: relative; }
+.storage-fill { height: 100%; border-radius: 12px; background: #4caf50; transition: width 0.5s, background 0.5s; min-width: 0; }
+.storage-fill.warn { background: #ff9800; }
+.storage-fill.crit { background: #f44336; }
+.storage-labels { display: flex; justify-content: space-between; margin-top: 8px; font-size: 13px; color: #555; }
+.storage-free, .storage-total { white-space: nowrap; }
+.btn {
+    padding: 8px 20px; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; text-decoration: none;
+    display: inline-block;
+}
+.btn-primary { background: #007bff; color: #fff; }
+.btn-success { background: #28a745; color: #fff; }
+.btn-warning { background: #ffc107; color: #000; }
+.btn-warning:hover { background: #e0a800; }
+.cleanup-result { margin-top: 12px; padding: 10px 14px; border-radius: 6px; font-size: 13px; }
+.cleanup-result.ok { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.cleanup-result.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+.btn-secondary { background: #6c757d; color: #fff; text-decoration: none; }
+.btn-group { margin-top: 20px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.stream-preview { background: #000; border-radius: 8px; overflow: hidden; }
+.stream-preview img { width: 100%; display: block; }
+.modal-overlay {
+    display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+}
+.modal {
+    background: #fff; margin: 10% auto; padding: 24px; border-radius: 8px;
+    width: 90%; max-width: 480px; position: relative;
+}
+.modal h2 { margin-top: 0; }
+.modal .close { position: absolute; top: 8px; right: 16px; font-size: 24px; cursor: pointer; color: #999; }
+.toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #2d6a4e; color: #fff; padding: 12px 28px; border-radius: 6px;
+    font-size: 15px; font-weight: 500; opacity: 0; pointer-events: none;
+    transition: opacity .3s, transform .3s; z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,.25);
+}
+.toast.show {
+    opacity: 1; transform: translateX(-50%) translateY(0);
+}
+@media (max-width: 900px) {
+    .two-pane { flex-direction: column; }
+    .live-pane { flex: none; width: 100%; position: static; }
+}
+</style>
+</head>
+<body>
+<h1>Camera Configuration</h1>
+
+<form id="configForm" method="POST" action="/save_config">
+    <input type="hidden" name="_active_tab" id="_active_tab" value="camera">
+    <input type="hidden" name="rtc_error_count" id="rtc_error_count" value="{{ rtc_error_count | default('0') }}">
+    <input type="hidden" name="rtc_last_error" id="rtc_last_error" value="{{ rtc_last_error | default('Never') }}">
+
+<!-- Two-pane layout -->
+<div class="two-pane">
+
+<!-- Left pane: Live View (always visible) -->
+<div class="live-pane">
+    <div class="pane-label">Live View</div>
+    <div class="stream-preview">
+        <img src="/stream.mjpg" />
+    </div>
+    <div class="btn-group">
+        <button type="button" class="btn btn-primary" onclick="capturePhoto('/capture.jpg')">Capture Photo</button>
+        <button type="button" class="btn btn-primary" onclick="capturePhoto('/capture_embedded.jpg')">Capture with Text</button>
+        <a href="/full.html" class="btn btn-secondary">Fullscreen View</a>
+    </div>
+    <div id="livePhoto" style="display:none; margin-top:16px;">
+        <img id="livePhotoImg" style="max-width:100%; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,.15);">
+    </div>
+    <script>
+    function capturePhoto(url) {
+        var img = document.getElementById('livePhotoImg');
+        img.src = url + '?' + Date.now();
+        document.getElementById('livePhoto').style.display = 'block';
+    }
+    </script>
+</div>
+
+<!-- Right pane: Settings tabs -->
+<div class="settings-pane">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div class="pane-label">Settings</div>
+        <button type="button" class="btn btn-primary" id="saveBtn">Save Configuration</button>
+    </div>
+    <div class="tab-btns">
+        <button type="button" class="tab-btn active" onclick="switchTab(event, 'tab-camera')">Camera Settings</button>
+        <button type="button" class="tab-btn" onclick="switchTab(event, 'tab-photo-interval')">Photo Interval</button>
+        <button type="button" class="tab-btn" onclick="switchTab(event, 'tab-transfer')">Transfer Settings</button>
+        <button type="button" class="tab-btn" onclick="switchTab(event, 'tab-system')">System</button>
+    </div>
+<!-- Tab 2: Camera Settings -->
+<div id="tab-camera" class="tab-content active">
+    <div class="field">
+        <label for="camera_name">Camera Name</label>
+        <input type="text" name="camera_name" id="camera_name" value="{{ camera_name }}" placeholder="e.g. front_porch">
+        <div class="hint">No spaces — use underscores. Used in filenames and embedded text.</div>
+    </div>
+
+    <div class="field">
+        <label for="rotation">Rotation</label>
+        <select name="rotation" id="rotation">
+            <option value="0" {% if rotation == '0' %}selected{% endif %}>0&#176;</option>
+            <option value="90" {% if rotation == '90' %}selected{% endif %}>90&#176;</option>
+            <option value="180" {% if rotation == '180' %}selected{% endif %}>180&#176;</option>
+            <option value="270" {% if rotation == '270' %}selected{% endif %}>270&#176;</option>
+        </select>
+        <div class="hint">Applies immediately.</div>
+    </div>
+
+    <div class="section-title">Output Settings</div>
+
+    <div class="field">
+        <label for="output_width">Output Width (pixels)</label>
+        <input type="number" name="output_width" id="output_width" value="{{ output_width }}" min="0">
+        <div class="hint">Defaults to camera sensor max width.</div>
+    </div>
+
+    <div class="field">
+        <label for="output_height">Output Height (pixels)</label>
+        <input type="number" name="output_height" id="output_height" value="{{ output_height }}" min="0">
+        <div class="hint">Defaults to camera sensor max height.</div>
+    </div>
+
+    <div class="field">
+        <label for="output_extension">Output Format</label>
+        <select name="output_extension">
+            <option value="jpg" {% if output_extension == 'jpg' %}selected{% endif %}>JPEG (.jpg)</option>
+            <option value="jpeg" {% if output_extension == 'jpeg' %}selected{% endif %}>JPEG (.jpeg)</option>
+            <option value="png" {% if output_extension == 'png' %}selected{% endif %}>PNG (.png)</option>
+        </select>
+    </div>
+
+    <div class="field">
+        <label for="embed_camera_name">Embed Camera Name</label>
+        <select name="embed_camera_name">
+            <option value="true" {% if is_true(embed_camera_name) %}selected{% endif %}>True</option>
+            <option value="false" {% if not is_true(embed_camera_name) %}selected{% endif %}>False</option>
+        </select>
+    </div>
+
+    <div class="field">
+        <label for="embed_timestamp">Embed Timestamp</label>
+        <select name="embed_timestamp">
+            <option value="true" {% if is_true(embed_timestamp) %}selected{% endif %}>True</option>
+            <option value="false" {% if not is_true(embed_timestamp) %}selected{% endif %}>False</option>
+        </select>
+    </div>
+
+    <div class="field">
+        <label for="file_name">File Name Prefix</label>
+        <input type="text" name="file_name" id="file_name" value="{{ file_name }}" placeholder="e.g. frontporch">
+    </div>
+
+    <div class="section-title">Text Overlay</div>
+
+    <div class="field">
+        <label for="text_size">Text Size (points)</label>
+        <input type="number" name="text_size" id="text_size" value="{{ text_size }}" min="6" max="120">
+    </div>
+
+    <div class="field">
+        <label for="text_color">Text Color</label>
+        <input type="text" name="text_color" id="text_color" value="{{ text_color }}" placeholder="e.g. silver, white, #ffffff">
+    </div>
+
+    <div class="field">
+        <label for="text_background">Text Background</label>
+        <input type="text" name="text_background" id="text_background" value="{{ text_background }}" placeholder="e.g. black, rgba(0,0,0,0.5)">
+    </div>
+</div>
+
+<!-- Photo Interval Settings -->
+<div id="tab-photo-interval" class="tab-content">
+    <div class="field">
+        <label for="capture_mode">Capture Mode</label>
+        <select name="capture_mode" id="capture_mode">
+            <option value="interval" {% if capture_mode == 'interval' %}selected{% endif %}>Interval (every N seconds)</option>
+            <option value="timed" {% if capture_mode == 'timed' %}selected{% endif %}>Specific Times</option>
+            <option value="sunrise_sunset" {% if capture_mode == 'sunrise_sunset' %}selected{% endif %}>Sunrise/Sunset + Offset</option>
+        </select>
+    </div>
+
+    <input type="hidden" name="timed_schedule" id="timed_schedule" value="{{ timed_schedule | tojson }}">
+
+    <!-- Interval fields -->
+    <div id="interval-fields">
+        <div class="field">
+            <label for="time_before_first_image">Delay Before First Photo (seconds)</label>
+            <input type="number" name="time_before_first_image" id="time_before_first_image" value="{{ time_before_first_image }}" min="0">
+            <div class="hint">Initial wait before the first scheduled capture.</div>
+        </div>
+        <div class="field">
+            <label for="time_before_image">Scheduled Capture Interval (seconds)</label>
+            <input type="number" name="time_before_image" id="time_before_image" value="{{ time_before_image }}" min="0">
+            <div class="hint">Gap between consecutive scheduled captures.</div>
+        </div>
+    </div>
+
+    <!-- Time-of-day fields -->
+    <div id="timed-fields" style="display:none;">
+        <div class="field">
+            <label>Times to Capture</label>
+            <div id="timed-entries"></div>
+            <button type="button" class="btn btn-primary" onclick="addTimedEntry()" style="margin-top:8px;">+ Add Time</button>
+            <div class="hint">Times are in the camera's configured timezone. Format: HH:MM (24hr).</div>
+        </div>
+    </div>
+
+    <!-- Sunrise/sunset fields -->
+    <div id="sunrise-sunset-fields" style="display:none;">
+        <div class="field">
+            <label for="sunrise_offset">Sunrise Offset (minutes)</label>
+            <input type="number" name="sunrise_offset" id="sunrise_offset" value="{{ sunrise_offset }}" min="-1440" max="1440">
+            <div class="hint">Positive = after sunrise (e.g. 30), Negative = before sunrise (e.g. -30)</div>
+        </div>
+        <div class="field">
+            <label for="sunset_offset">Sunset Offset (minutes)</label>
+            <input type="number" name="sunset_offset" id="sunset_offset" value="{{ sunset_offset }}" min="-1440" max="1440">
+            <div class="hint">Positive = after sunset (e.g. 30), Negative = before sunset (e.g. -60)</div>
+        </div>
+        <div class="field">
+            <label for="grid_square">Grid Square (Maidenhead)</label>
+            <input type="text" name="grid_square" id="grid_square" value="{{ grid_square | default('') }}" placeholder="e.g. IO91" maxlength="6" style="text-transform:uppercase;">
+            <div class="hint">2, 4, or 6 char locator. Overrides lat/lon if set. (e.g. IO91 &approx; London)</div>
+        </div>
+        <div style="display:flex;gap:16px;">
+            <div class="field" style="flex:1;">
+                <label for="lat">Latitude</label>
+                <input type="number" name="lat" id="lat" value="{{ lat | default('51.5') }}" step="0.0001" min="-90" max="90">
+            </div>
+            <div class="field" style="flex:1;">
+                <label for="lon">Longitude</label>
+                <input type="number" name="lon" id="lon" value="{{ lon | default('-0.1') }}" step="0.0001" min="-180" max="180">
+            </div>
+        </div>
+    </div>
+
+    <!-- RTC Warning Banner -->
+    <div id="rtc-warning" style="display:none; background:#fff3cd; color:#856404; border:1px solid #ffc107; border-radius:6px; padding:12px 16px; margin-top:12px; font-size:14px;">
+        <div style="font-weight:bold;">&#9888; RTC Warning</div>
+        <div id="rtc-warning-msg"></div>
+    </div>
+</div>
+
+<!-- Tab 2: Transfer Settings -->
+<div id="tab-transfer" class="tab-content">
+    <div class="section-title">FTP / SFTP Configuration</div>
+
+    <div class="field">
+        <label for="ftp-mode">Transfer Protocol</label>
+        <select name="ftp-mode">
+            <option value="sftp" {% if ftp_mode == 'sftp' %}selected{% endif %}>SFTP</option>
+            <option value="ftp" {% if ftp_mode == 'ftp' %}selected{% endif %}>FTP</option>
+        </select>
+    </div>
+
+    <div class="field">
+        <label for="ftp-server">Server</label>
+        <input type="text" name="ftp-server" id="ftp-server" value="{{ ftp_server }}" placeholder="e.g. ftp.example.com or IP address">
+    </div>
+
+    <div class="field">
+        <label for="ftp-port">Port</label>
+        <input type="number" name="ftp-port" id="ftp-port" value="{{ ftp_port }}" min="1" max="65535">
+        <div class="hint">22 for SFTP, 21 for FTP</div>
+    </div>
+
+    <div class="field">
+        <label for="ftp-username">Username</label>
+        <input type="text" name="ftp-username" id="ftp-username" value="{{ ftp_username }}">
+    </div>
+
+    <div class="field">
+        <label for="ftp-password">Password</label>
+        <input type="password" name="ftp-password" id="ftp-password" value="{{ ftp_password }}">
+    </div>
+
+    <div class="field">
+        <label for="ftp-destination">Destination Path(s)</label>
+        <input type="text" name="ftp-destination" id="ftp-destination" value="{{ ftp_destination }}" placeholder="e.g. /home/user/pics, /backup/cam">
+        <div class="hint">Comma-separated list of remote paths. Include trailing / for subdirectory mode.</div>
+    </div>
+
+    <div class="btn-group">
+        <button type="button" class="btn btn-success" id="testConnectionBtn">Test Connection</button>
+        <span id="testResult" style="font-size:14px; margin-left:8px;"></span>
+    </div>
+    <script>
+    (function() {
+        document.getElementById('testConnectionBtn').addEventListener('click', function() {
+            var btn = document.getElementById('testConnectionBtn');
+            var result = document.getElementById('testResult');
+            btn.disabled = true;
+            btn.textContent = 'Testing...';
+            result.textContent = '';
+            var form = document.getElementById('configForm');
+            var fd = new FormData(form);
+            fetch('/test_connection', {
+                method: 'POST',
+                body: fd
+            }).then(function(r) { return r.text().then(function(t) { return {status:r.status, data:t}; }); })
+            .then(function(r) {
+                if (r.status === 200) {
+                    try { var j = JSON.parse(r.data); } catch(e) { var j = {status:'ok', message:r.data}; }
+                    if (j.status === 'ok') {
+                        result.textContent = j.message;
+                        result.style.color = '#28a745';
+                    } else {
+                        result.textContent = j.message;
+                        result.style.color = '#dc3545';
+                    }
+                } else {
+                    result.textContent = r.data;
+                    result.style.color = '#dc3545';
+                }
+            }).catch(function(e) {
+                result.textContent = 'Network error: ' + e.message;
+                result.style.color = '#dc3545';
+            }).finally(function() {
+                btn.disabled = false;
+                btn.textContent = 'Test Connection';
+            });
+        });
+    })();
+    </script>
+</div>
+
+<!-- Tab 4: System -->
+<div id="tab-system" class="tab-content">
+    <div class="section-title">Time & Date</div>
+
+    <div class="field">
+        <label for="camera_timezone">Timezone</label>
+        <input list="timezones" name="camera_timezone" id="camera_timezone" value="{{ camera_timezone }}" placeholder="e.g. America/Los_Angeles">
+        <datalist id="timezones">
+            <option value="America/New_York">
+            <option value="America/Chicago">
+            <option value="America/Denver">
+            <option value="America/Los_Angeles">
+            <option value="America/Anchorage">
+            <option value="Pacific/Honolulu">
+            <option value="America/Phoenix">
+            <option value="America/Toronto">
+            <option value="America/Vancouver">
+            <option value="America/Regina">
+            <option value="America/Mexico_City">
+            <option value="America/Bogota">
+            <option value="America/Lima">
+            <option value="America/Sao_Paulo">
+            <option value="America/Argentina/Buenos_Aires">
+            <option value="Europe/London">
+            <option value="Europe/Paris">
+            <option value="Europe/Berlin">
+            <option value="Europe/Madrid">
+            <option value="Europe/Rome">
+            <option value="Europe/Amsterdam">
+            <option value="Europe/Brussels">
+            <option value="Europe/Vienna">
+            <option value="Europe/Zurich">
+            <option value="Europe/Stockholm">
+            <option value="Europe/Copenhagen">
+            <option value="Europe/Oslo">
+            <option value="Europe/Helsinki">
+            <option value="Europe/Warsaw">
+            <option value="Europe/Prague">
+            <option value="Europe/Budapest">
+            <option value="Europe/Bucharest">
+            <option value="Europe/Athens">
+            <option value="Europe/Istanbul">
+            <option value="Europe/Moscow">
+            <option value="Asia/Dubai">
+            <option value="Asia/Kolkata">
+            <option value="Asia/Karachi">
+            <option value="Asia/Bangkok">
+            <option value="Asia/Singapore">
+            <option value="Asia/Shanghai">
+            <option value="Asia/Hong_Kong">
+            <option value="Asia/Taipei">
+            <option value="Asia/Seoul">
+            <option value="Asia/Tokyo">
+            <option value="Australia/Perth">
+            <option value="Australia/Adelaide">
+            <option value="Australia/Sydney">
+            <option value="Australia/Melbourne">
+            <option value="Pacific/Auckland">
+            <option value="Pacific/Fiji">
+        </datalist>
+        <div class="hint">Used for timed and sunrise/sunset capture times.</div>
+    </div>
+
+    <div class="field">
+        <label for="camera_daylight_savings">Apply Daylight Savings</label>
+        <select name="camera_daylight_savings">
+            <option value="true" {% if is_true(camera_daylight_savings) %}selected{% endif %}>True</option>
+            <option value="false" {% if not is_true(camera_daylight_savings) %}selected{% endif %}>False</option>
+        </select>
+    </div>
+
+    <div class="section-title">Storage</div>
+
+    <div class="storage-gauge">
+        <div class="storage-bar">
+            <div class="storage-fill {% if pct >= 90 %}crit{% elif pct >= 75 %}warn{% endif %}" style="width:{{ pct }}%;" title="{{ pct }}% used"></div>
+        </div>
+        <div class="storage-labels">
+            <span class="storage-free">{{ free_gb }} GB free</span>
+            <span class="storage-total">{{ total_gb }} GB total</span>
+        </div>
+    </div>
+
+    <div class="field">
+        <label for="archive_retention_days">Archive Retention (days)</label>
+        <input type="number" name="archive_retention_days" id="archive_retention_days" value="{{ archive_retention_days }}" min="0">
+        <div class="hint">0 = disable automatic cleanup.</div>
+    </div>
+
+    <div class="field">
+        <label for="reserved_space_gb">Reserved Space (GB)</label>
+        <input type="number" name="reserved_space_gb" id="reserved_space_gb" value="{{ reserved_space_gb }}" min="0" step="1">
+        <div class="hint">GB to keep free on the filesystem.</div>
+    </div>
+
+    <div class="btn-group">
+        <button type="button" class="btn btn-warning" id="cleanupBtn">Clean Old Images</button>
+        <span id="cleanupResult" style="font-size:14px; margin-left:8px;"></span>
+    </div>
+    <script>
+    (function() {
+        document.getElementById('cleanupBtn').addEventListener('click', function() {
+            var btn = document.getElementById('cleanupBtn');
+            var result = document.getElementById('cleanupResult');
+            btn.disabled = true;
+            btn.textContent = 'Cleaning...';
+            result.textContent = '';
+            fetch('/cleanup_disk')
+                .then(function(r) { return r.text().then(function(t) { return {status:r.status, data:t}; }); })
+                .then(function(r) {
+                    var div = document.createElement('div');
+                    div.className = 'cleanup-result ' + (r.status === 200 ? 'ok' : 'error');
+                    div.textContent = r.data;
+                    result.textContent = '';
+                    result.appendChild(div);
+                })
+                .catch(function(e) {
+                    var div = document.createElement('div');
+                    div.className = 'cleanup-result error';
+                    div.textContent = 'Error: ' + e.message;
+                    result.textContent = '';
+                    result.appendChild(div);
+                })
+                .finally(function() {
+                    btn.disabled = false;
+                    btn.textContent = 'Clean Old Images';
+                });
+        });
+    })();
+    </script>
+</div>
+
+<!-- Tab 5: Import/Export -->
+<div id="tab-import-export" class="tab-content">
+    <div class="section-title">Import / Export Configuration</div>
+    <p>Export your current settings as a downloadable file, or import a previously saved configuration.</p>
+
+    <div class="btn-group">
+        <a href="/export_config" class="btn btn-primary">Export Config</a>
+        <button type="button" class="btn btn-primary" id="importBtn">Import Config</button>
+        <span id="importResult" style="font-size:14px; margin-left:8px;"></span>
+    </div>
+    <script>
+    document.getElementById('importBtn').addEventListener('click', function() {
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.cfg,.config';
+        input.onchange = function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var fd = new FormData();
+                fd.append('config_file', new Blob([e.target.result]), file.name);
+                fetch('/import_config', {
+                    method: 'POST',
+                    body: fd
+                }).then(function(r) { return r.text().then(function(t) { return {status:r.status, data:t}; }); })
+                .then(function(r) {
+                    var msg = document.getElementById('importResult');
+                    if (r.status === 200) {
+                        msg.textContent = 'Imported successfully!';
+                        msg.style.color = '#28a745';
+                        setTimeout(function() { window.location.reload(); }, 1000);
+                    } else {
+                        msg.textContent = 'Error: ' + r.data;
+                        msg.style.color = '#dc3545';
+                    }
+                });
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    });
+    </script>
+</div>
+
+</div><!-- /.settings-pane -->
+</div><!-- /.two-pane -->
+</form>
+
+<!-- Live disk usage -->
+<div style="margin-top:24px;">
+    <div class="storage-gauge">
+        <div class="storage-bar">
+            <div class="storage-fill {% if pct >= 90 %}crit{% elif pct >= 75 %}warn{% endif %}" id="liveStorageBar" style="width:{{ pct }}%;" title="{{ pct }}% used"></div>
+        </div>
+        <div class="storage-labels">
+            <span class="storage-free" id="liveStorageFree">{{ free_gb }} GB free</span>
+            <span class="storage-total">{{ total_gb }} GB total</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    var cfg = {
+        rotation: '{{ rotation }}',
+        camera_name: '{{ camera_name }}',
+        capture_mode: '{{ capture_mode }}',
+        time_before_image: '{{ time_before_image }}',
+        time_before_first_image: '{{ time_before_first_image }}',
+        timed_schedule: {{ timed_schedule | tojson }},
+        output_width: '{{ output_width }}',
+        output_height: '{{ output_height }}',
+        output_extension: '{{ output_extension }}',
+        embed_timestamp: '{{ embed_timestamp }}',
+        embed_camera_name: '{{ embed_camera_name }}',
+        archive_retention_days: '{{ archive_retention_days }}',
+        reserved_space_gb: '{{ reserved_space_gb }}',
+        file_name: '{{ file_name }}',
+        text_size: '{{ text_size }}',
+        text_color: '{{ text_color }}',
+        text_background: '{{ text_background }}',
+        camera_timezone: '{{ camera_timezone }}',
+        camera_daylight_savings: '{{ camera_daylight_savings }}',
+        camera_port: '{{ camera_port }}',
+        camera_url: '{{ camera_url }}',
+        sunrise_offset: '{{ sunrise_offset }}',
+        sunset_offset: '{{ sunset_offset }}',
+        grid_square: '{{ grid_square | default("") }}',
+        lat: '{{ lat | default("51.5") }}',
+        lon: '{{ lon | default("-0.1") }}',
+        ftp_mode: '{{ ftp_mode }}',
+        ftp_server: '{{ ftp_server }}',
+        ftp_port: '{{ ftp_port }}',
+        ftp_username: '{{ ftp_username }}',
+        ftp_password: '{{ ftp_password }}',
+        ftp_destination: '{{ ftp_destination }}',
+    };
+</script>
+<script>{% include 'config.js' %}</script>
+
+</body>
+</html>

@@ -1,0 +1,28 @@
+<html>
+<head>
+<title>Picamera2 Fullscreen Stream (Rotated {{ rotation }}&#176;)</title>
+<style>
+body { margin: 0; padding: 0; background: black; overflow: hidden; }
+img { width: 100vw; height: 100vh; object-fit: contain; display: block; }
+#controls { position: fixed; top: 10px; right: 10px; z-index: 1; }
+button { padding: 10px; background: rgba(255,255,255,0.8); border: none; cursor: pointer; }
+</style>
+</head>
+<body>
+<img id="stream" src="/stream.mjpg" />
+<div id="controls">
+<button onclick="toggleFullscreen()">Fullscreen</button>
+<button onclick="window.location.href='/'">Back to Index</button>
+</div>
+<script>
+function toggleFullscreen() {
+    const elem = document.getElementById('stream');
+    if (!document.fullscreenElement) {
+        elem.requestFullscreen().catch(err => console.log('Fullscreen failed:', err));
+    } else {
+        document.exitFullscreen();
+    }
+}
+</script>
+</body>
+</html>
