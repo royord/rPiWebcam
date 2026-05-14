@@ -12,9 +12,11 @@
 import io
 import logging
 import configparser
+import json
 import os
 import shutil
 import time
+from datetime import datetime, timedelta
 from threading import Condition, Thread, Event
 from flask import Flask, Response, redirect, request, render_template_string
 from io import BytesIO
@@ -22,6 +24,7 @@ from flask import send_file
 import sys
 import requests
 import netifaces as ni
+import sunset
 import lib.file_transfer as ft
 
 from PIL import Image, ImageDraw, ImageFont
@@ -42,8 +45,15 @@ default_config = {
     'ftp-destination': 'ftp_destination_list',
     'camera_name': 'camera_name',
     'rotation': '0',
+    'capture_mode': 'interval',
     'time_before_image': '10',
     'time_before_first_image': '120',
+    'timed_schedule': '[]',
+    'sunrise_offset': '30',
+    'sunset_offset': '-60',
+    'lat': '51.5',
+    'lon': '-0.1',
+    'grid_square': '',
     'output_width': None,
     'output_height': None,
     'output_extension': 'extension',
@@ -500,15 +510,67 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
 <!-- Photo Interval Settings -->
 <div id="tab-photo-interval" class="tab-content">
     <div class="field">
-        <label for="time_before_first_image">Delay Before First Photo (seconds)</label>
-        <input type="number" name="time_before_first_image" id="time_before_first_image" value="{globals()['time_before_first_image']}" min="0">
-        <div class="hint">Initial wait before the first scheduled capture. Set to 0 to capture immediately on startup.</div>
+        <label for="capture_mode">Capture Mode</label>
+        <select name="capture_mode" id="capture_mode">
+            <option value="interval" {_opt(globals()['capture_mode'], ['interval'])}>Interval (every N seconds)</option>
+            <option value="timed" {_opt(globals()['capture_mode'], ['timed'])}>Specific Times</option>
+            <option value="sunrise_sunset" {_opt(globals()['capture_mode'], ['sunrise_sunset'])}>Sunrise/Sunset + Offset</option>
+        </select>
     </div>
 
-    <div class="field">
-        <label for="time_before_image">Scheduled Capture Interval (seconds)</label>
-        <input type="number" name="time_before_image" id="time_before_image" value="{globals()['time_before_image']}" min="0">
-        <div class="hint">Gap between consecutive scheduled captures.</div>
+    <input type="hidden" name="timed_schedule" id="timed_schedule" value="{globals()['timed_schedule']}">
+
+    <!-- Interval fields -->
+    <div id="interval-fields">
+        <div class="field">
+            <label for="time_before_first_image">Delay Before First Photo (seconds)</label>
+            <input type="number" name="time_before_first_image" id="time_before_first_image" value="{globals()['time_before_first_image']}" min="0">
+            <div class="hint">Initial wait before the first scheduled capture.</div>
+        </div>
+        <div class="field">
+            <label for="time_before_image">Scheduled Capture Interval (seconds)</label>
+            <input type="number" name="time_before_image" id="time_before_image" value="{globals()['time_before_image']}" min="0">
+            <div class="hint">Gap between consecutive scheduled captures.</div>
+        </div>
+    </div>
+
+    <!-- Time-of-day fields -->
+    <div id="timed-fields" style="display:none;">
+        <div class="field">
+            <label>Times to Capture</label>
+            <div id="timed-entries"></div>
+            <button type="button" class="btn btn-primary" onclick="addTimedEntry()" style="margin-top:8px;">+ Add Time</button>
+            <div class="hint">Times are in the camera's configured timezone. Format: HH:MM (24hr).</div>
+        </div>
+    </div>
+
+    <!-- Sunrise/sunset fields -->
+    <div id="sunrise-sunset-fields" style="display:none;">
+        <div class="field">
+            <label for="sunrise_offset">Sunrise Offset (minutes)</label>
+            <input type="number" name="sunrise_offset" id="sunrise_offset" value="{globals()['sunrise_offset']}" min="-1440" max="1440">
+            <div class="hint">Positive = after sunrise (e.g. 30), Negative = before sunrise (e.g. -30)</div>
+        </div>
+        <div class="field">
+            <label for="sunset_offset">Sunset Offset (minutes)</label>
+            <input type="number" name="sunset_offset" id="sunset_offset" value="{globals()['sunset_offset']}" min="-1440" max="1440">
+            <div class="hint">Positive = after sunset (e.g. 30), Negative = before sunset (e.g. -60)</div>
+        </div>
+        <div class="field">
+            <label for="grid_square">Grid Square (Maidenhead)</label>
+            <input type="text" name="grid_square" id="grid_square" value="{globals().get('grid_square', '')}" placeholder="e.g. IO91" maxlength="6" style="text-transform:uppercase;">
+            <div class="hint">2, 4, or 6 char locator. Overrides lat/lon if set. (e.g. IO91 ≈ London)</div>
+        </div>
+        <div style="display:flex;gap:16px;">
+            <div class="field" style="flex:1;">
+                <label for="lat">Latitude</label>
+                <input type="number" name="lat" id="lat" value="{globals().get('lat', '51.5')}" step="0.0001" min="-90" max="90">
+            </div>
+            <div class="field" style="flex:1;">
+                <label for="lon">Longitude</label>
+                <input type="number" name="lon" id="lon" value="{globals().get('lon', '-0.1')}" step="0.0001" min="-180" max="180">
+            </div>
+        </div>
     </div>
 </div>
 
@@ -754,11 +816,97 @@ function switchTab(e, tabId) {{
     try {{ document.getElementById('_active_tab').value = name; localStorage.setItem('configActiveTab', name); }} catch(e) {{}}
 }}
 
+// Capture mode switching
+(function() {{
+    var modeSelect = document.getElementById('capture_mode');
+    if (modeSelect) {{
+        function updateMode() {{
+            var mode = modeSelect.value;
+            document.getElementById('interval-fields').style.display = (mode === 'interval') ? 'block' : 'none';
+            document.getElementById('timed-fields').style.display = (mode === 'timed') ? 'block' : 'none';
+            document.getElementById('sunrise-sunset-fields').style.display = (mode === 'sunrise_sunset') ? 'block' : 'none';
+        }}
+        modeSelect.addEventListener('change', updateMode);
+        updateMode();
+    }}
+}})();
+
+// Timed schedule entry management
+var timedEntryCounter = 0;
+function addTimedEntry(value) {{
+    var container = document.getElementById('timed-entries');
+    timedEntryCounter++;
+    var div = document.createElement('div');
+    div.style.cssText = 'display:flex;gap:8px;margin-bottom:6px;align-items:center;';
+    div.id = 'timed-entry-' + timedEntryCounter;
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.name = 'timed_time_' + timedEntryCounter;
+    input.className = 'timed-input';
+    input.placeholder = 'HH:MM';
+    input.maxLength = 5;
+    input.style.cssText = 'flex:1;padding:6px 10px;border:1px solid #ced4da;border-radius:4px;font-size:14px;';
+    if (value) input.value = value;
+    var removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'btn';
+    removeBtn.style.cssText = 'background:#dc3545;color:#fff;padding:6px 12px;border:none;border-radius:4px;cursor:pointer;';
+    removeBtn.textContent = '×';
+    removeBtn.onclick = function() {{ div.remove(); }};
+    div.appendChild(input);
+    div.appendChild(removeBtn);
+    container.appendChild(div);
+}}
+
+function serializeTimedEntries() {{
+    var inputs = document.querySelectorAll('.timed-input');
+    var times = [];
+    inputs.forEach(function(inp) {{
+        if (inp.value.trim()) times.push(inp.value.trim());
+    }});
+    document.getElementById('timed_schedule').value = JSON.stringify(times);
+}}
+
+// Grid square auto-conversion
+(function() {{
+    var gsInput = document.getElementById('grid_square');
+    if (gsInput) {{
+        gsInput.addEventListener('change', function() {{
+            var val = gsInput.value.trim();
+            if (val.length >= 2) {{
+                var result = null;
+                try {{
+                    // Inline grid conversion
+                    var gs = val.toUpperCase();
+                    if (gs.length >= 2) {{
+                        var lon = -180 + (gs.charCodeAt(0) - 65) * 20;
+                        var lat = -90 + (gs.charCodeAt(1) - 65) * 10;
+                        if (gs.length >= 4) {{
+                            lon += (parseInt(gs[2]) || 0) * 2;
+                            lat += (parseInt(gs[3]) || 0) * 1;
+                        }}
+                        if (gs.length >= 6) {{
+                            lon += (gs.charCodeAt(4) - 65) * (5.0 / 60.0);
+                            lat += (gs.charCodeAt(5) - 65) * (2.5 / 60.0);
+                        }}
+                        result = [lat, lon];
+                    }}
+                }} catch(e) {{}}
+                if (result) {{
+                    document.getElementById('lat').value = result[0].toFixed(4);
+                    document.getElementById('lon').value = result[1].toFixed(4);
+                }}
+            }}
+        }});
+    }}
+}})();
+
 // Save button: AJAX save then reload page
 (function() {{
     var saveBtn = document.getElementById('saveBtn');
     if (saveBtn) {{
         saveBtn.addEventListener('click', function() {{
+            serializeTimedEntries();
             var form = document.getElementById('configForm');
             var fd = new FormData(form);
             saveBtn.disabled = true;
@@ -790,6 +938,17 @@ function switchTab(e, tabId) {{
             }});
         }});
     }}
+}})();
+
+// Initialize timed schedule entries from saved config
+(function() {{
+    try {{
+        var saved = document.getElementById('timed_schedule').value;
+        if (saved && saved !== '[]') {{
+            var times = JSON.parse(saved);
+            times.forEach(function(t) {{ addTimedEntry(t); }});
+        }}
+    }} catch(e) {{}}
 }})();
 
 // Restore tab and show toast on load
@@ -945,8 +1104,10 @@ function switchTab(e, tabId) {{
         'ftp-username': '{globals()['ftp-username']}',
         'camera_name': '{globals()['camera_name']}',
         'rotation': '{globals()['rotation']}',
+        'capture_mode': '{globals()['capture_mode']}',
         'time_before_first_image': '{globals()['time_before_first_image']}',
         'time_before_image': '{globals()['time_before_image']}',
+        'timed_schedule': '{globals()['timed_schedule']}',
         'output_width': '{globals()['output_width']}',
         'output_height': '{globals()['output_height']}',
         'output_extension': '{globals()['output_extension']}',
@@ -962,6 +1123,11 @@ function switchTab(e, tabId) {{
         'camera_daylight_savings': _bool_val('camera_daylight_savings') ? 'true' : 'false',
         'camera_port': '{globals()['camera_port']}',
         'camera_url': '{globals()['camera_url']}',
+        'sunrise_offset': '{globals()['sunrise_offset']}',
+        'sunset_offset': '{globals()['sunset_offset']}',
+        'grid_square': '{globals().get("grid_square", "")}',
+        'lat': '{globals().get("lat", "51.5")}',
+        'lon': '{globals().get("lon", "-0.1")}',
     }};
     var hasChanges = false;
 
@@ -1065,6 +1231,151 @@ def periodic_time_sync():
                 update_rtc_time()
         except Exception:
             pass  # No internet, skip this cycle
+
+
+def grid_square_to_latlon(gs):
+    """Convert Maidenhead grid square to (lat, lon).
+    Supports 2, 4, or 6 char grids (e.g. 'IO91' -> ~51.5, -0.1).
+    Returns (lat, lon) or None on invalid input.
+    """
+    gs = gs.strip().upper()
+    if len(gs) < 2 or len(gs) not in (2, 4, 6):
+        return None
+    if not all(c.isalpha() for c in gs[0:2]) or not all(c.isdigit() for c in gs[2:4]):
+        return None
+
+    # Field (2 chars): 20° x 10°
+    field_e = ord(gs[0]) - ord('A')  # 0-17
+    field_w = ord(gs[1]) - ord('A')  # 0-17
+    lon = -180 + field_e * 20
+    lat = -90 + field_w * 10
+
+    if len(gs) >= 4:
+        # Subfield (2 digits): 2° x 1°
+        sub_e = int(gs[2])  # 0-9
+        sub_w = int(gs[3])  # 0-9
+        lon += sub_e * 2
+        lat += sub_w * 1
+
+    if len(gs) >= 6:
+        # Extended field (2 chars): 5' x 2.5'
+        ext_e = ord(gs[4]) - ord('A')  # 0-23
+        ext_w = ord(gs[5]) - ord('A')  # 0-23
+        lon += ext_e * (5.0 / 60.0)
+        lat += ext_w * (2.5 / 60.0)
+
+    return (lat, lon)
+
+
+class UnifiedScheduler:
+    """Replaces background_capture_task. Supports interval, timed, and sunrise/sunset modes."""
+
+    def __init__(self, restart_event):
+        self.restart_event = restart_event
+        self._last_captured = set()  # set of "key_date" strings to prevent duplicates
+
+    def _should_capture(self, key, date_str):
+        tag = f"{key}_{date_str}"
+        if tag in self._last_captured:
+            return False
+        self._last_captured.add(tag)
+        return True
+
+    def _check_timed(self, now, today):
+        try:
+            times = json.loads(globals().get('timed_schedule', '[]'))
+            current_hm = now.strftime('%H:%M')
+            for t in times:
+                if t == current_hm and self._should_capture(f'timed_{t}', today):
+                    print(f"Timed capture at {t}")
+                    capture_embedded_photo()
+        except Exception as e:
+            print(f"Timed schedule error: {e}")
+
+    def _check_sunrise_sunset(self, now, today):
+        try:
+            gs = globals().get('grid_square', '')
+            if gs:
+                result = grid_square_to_latlon(gs)
+                if result is None:
+                    print(f"Invalid grid square: {gs}")
+                    return
+                lat, lon = result
+            else:
+                try:
+                    lat = float(globals().get('lat', '51.5'))
+                    lon = float(globals().get('lon', '-0.1'))
+                except ValueError:
+                    lat, lon = 51.5, -0.1
+
+            tz_name = globals().get('camera_timezone', '')
+            sunrise_off = int(globals().get('sunrise_offset', '30'))
+            sunset_off = int(globals().get('sunset_offset', '-60'))
+
+            sun = sunset.Sunset(lat, lon, tz_name)
+            sr = sun.sunrise()
+            ss = sun.sunset()
+            if sr is None or ss is None:
+                return
+
+            # Construct datetime with the sun times, using the camera's timezone
+            if tz_name:
+                try:
+                    import zoneinfo
+                    tz = zoneinfo.ZoneInfo(tz_name)
+                    sunrise_dt = datetime(now.year, now.month, now.day,
+                                          sr.hour, sr.minute, sr.second, tzinfo=tz)
+                    sunset_dt = datetime(now.year, now.month, now.day,
+                                         ss.hour, ss.minute, ss.second, tzinfo=tz)
+                except Exception:
+                    sunrise_dt = now.replace(hour=sr.hour, minute=sr.minute, second=sr.second)
+                    sunset_dt = now.replace(hour=ss.hour, minute=ss.minute, second=ss.second)
+            else:
+                sunrise_dt = now.replace(hour=sr.hour, minute=sr.minute, second=sr.second)
+                sunset_dt = now.replace(hour=ss.hour, minute=ss.minute, second=ss.second)
+
+            target_sr = sunrise_dt + timedelta(minutes=sunrise_off)
+            target_ss = sunset_dt + timedelta(minutes=sunset_off)
+
+            # Capture if within a 2-minute window of the target time
+            if abs((now - target_sr).total_seconds()) < 120 and self._should_capture('sr', today):
+                print(f"Sunrise capture at ~{target_sr.strftime('%H:%M')}")
+                capture_embedded_photo()
+            if abs((now - target_ss).total_seconds()) < 120 and self._should_capture('ss', today):
+                print(f"Sunset capture at ~{target_ss.strftime('%H:%M')}")
+                capture_embedded_photo()
+        except Exception as e:
+            print(f"Sunrise/sunset schedule error: {e}")
+
+    def tick(self):
+        """Called every 30 seconds. Check if capture should fire."""
+        mode = globals().get('capture_mode', 'interval')
+        now = datetime.now()
+        today = now.strftime('%Y-%m-%d')
+
+        if mode == 'interval':
+            # Interval mode is handled by the existing background_capture_task
+            return
+        elif mode == 'timed':
+            self._check_timed(now, today)
+        elif mode == 'sunrise_sunset':
+            self._check_sunrise_sunset(now, today)
+
+
+def scheduler_loop(scheduler):
+    """Main loop for the UnifiedScheduler — checks every 30 seconds."""
+    while True:
+        time.sleep(30)
+        if scheduler.restart_event and scheduler.restart_event.is_set():
+            print("Scheduler: config changed, restarting...")
+            scheduler.restart_event.clear()
+            # Refresh the globals after a restart
+            load_config()
+        try:
+            scheduler.tick()
+        except Exception as e:
+            print(f"Scheduler tick error: {e}")
+
 
 class StreamingOutput(io.BufferedIOBase):
     def __init__(self):
@@ -1218,6 +1529,15 @@ def save_config_route():
         elif key == "reserved_space_gb":
             if not value.replace('.', '', 1).isnumeric() or float(value) < 0.5:
                 error_text += f"Invalid reserved_space_gb: {value}. Must be at least 0.5.\n"
+        elif key == "capture_mode":
+            if value not in ('interval', 'timed', 'sunrise_sunset'):
+                error_text += f"Invalid capture_mode: {value}. Must be interval, timed, or sunrise_sunset.\n"
+        elif key == "sunrise_offset":
+            if not value.isnumeric():
+                error_text += f"Invalid sunrise_offset: {value}. Must be an integer.\n"
+        elif key == "sunset_offset":
+            if not value.isnumeric():
+                error_text += f"Invalid sunset_offset: {value}. Must be an integer.\n"
 
     if len(error_text) > 0:
         return error_text, 400
