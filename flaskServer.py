@@ -20,6 +20,7 @@ from flask import Flask, Response, redirect, request, render_template_string
 from io import BytesIO
 from flask import send_file
 import sys
+import requests
 import netifaces as ni
 import lib.file_transfer as ft
 
@@ -56,6 +57,7 @@ default_config = {
     'reserved_space_gb': '5',
     '_bg_restart_event': None,
     '_last_cleanup_time': 0,
+    '_last_time_sync': 0,
     'file_name': 'file_name',
     'text_size': '18',
     'text_color': 'silver',
@@ -413,6 +415,7 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
     </div>
     <div class="tab-btns">
         <button type="button" class="tab-btn active" onclick="switchTab(event, 'tab-camera')">Camera Settings</button>
+        <button type="button" class="tab-btn" onclick="switchTab(event, 'tab-photo-interval')">Photo Interval</button>
         <button type="button" class="tab-btn" onclick="switchTab(event, 'tab-transfer')">Transfer Settings</button>
         <button type="button" class="tab-btn" onclick="switchTab(event, 'tab-system')">System</button>
     </div>
@@ -433,18 +436,6 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
             <option value="270" {_opt(int(globals()['rotation']), [270])}>270&deg;</option>
         </select>
         <div class="hint">Applies immediately.</div>
-    </div>
-
-    <div class="field">
-        <label for="time_before_first_image">Delay Before First Photo (seconds)</label>
-        <input type="number" name="time_before_first_image" id="time_before_first_image" value="{globals()['time_before_first_image']}" min="0">
-        <div class="hint">Initial wait before the first scheduled capture. Set to 0 to capture immediately on startup.</div>
-    </div>
-
-    <div class="field">
-        <label for="time_before_image">Scheduled Capture Interval (seconds)</label>
-        <input type="number" name="time_before_image" id="time_before_image" value="{globals()['time_before_image']}" min="0">
-        <div class="hint">Gap between consecutive scheduled captures.</div>
     </div>
 
     <div class="section-title">Output Settings</div>
@@ -506,6 +497,21 @@ h1 {{ margin: 0 0 20px; font-size: 22px; color: #333; }}
     <div class="field">
         <label for="text_background">Text Background</label>
         <input type="text" name="text_background" id="text_background" value="{globals()['text_background']}" placeholder="e.g. black, rgba(0,0,0,0.5)">
+    </div>
+</div>
+
+<!-- Photo Interval Settings -->
+<div id="tab-photo-interval" class="tab-content">
+    <div class="field">
+        <label for="time_before_first_image">Delay Before First Photo (seconds)</label>
+        <input type="number" name="time_before_first_image" id="time_before_first_image" value="{globals()['time_before_first_image']}" min="0">
+        <div class="hint">Initial wait before the first scheduled capture. Set to 0 to capture immediately on startup.</div>
+    </div>
+
+    <div class="field">
+        <label for="time_before_image">Scheduled Capture Interval (seconds)</label>
+        <input type="number" name="time_before_image" id="time_before_image" value="{globals()['time_before_image']}" min="0">
+        <div class="hint">Gap between consecutive scheduled captures.</div>
     </div>
 </div>
 
@@ -984,31 +990,84 @@ function switchTab(e, tabId) {{
 """
 
 def connection_check(interface):
-    """
-    Update needed
-    """
-    ni.gateways()
-    interfaces = ni.interfaces()
+    """Check network interface has internet connectivity. Returns IP or False."""
+    try:
+        if interface not in ni.interfaces():
+            return False
+        ip = ni.ifaddresses(interface)[ni.AF_INET][0]['addr']
+        if len(ip) <= 7:
+            return False
+        print(f'{interface} IP address: {ip}')
+        requests.head('http://google.com', timeout=5)
+        print("Internet connection confirmed")
+        return ip
+    except Exception as ex:
+        print(f"Connection check failed for {interface}: {ex}")
+        return False
 
-    if interface in interfaces:
+
+def get_interface_ip():
+    """Auto-detect a network interface with internet connectivity. Returns (interface, ip) or (None, None)."""
+    gateways = ni.gateways()
+    # First check the default gateway interface
+    try:
+        default_gw = gateways[999][0][0]  # default route interface
+    except (KeyError, IndexError):
+        default_gw = None
+
+    # Try the default gateway interface first, then all others
+    candidates = []
+    if default_gw:
+        candidates.append(default_gw)
+    for iface in ni.interfaces():
+        if iface not in ('lo',) and iface not in candidates:
+            candidates.append(iface)
+
+    for iface in candidates:
+        ip = connection_check(iface)
+        if ip:
+            print(f"Using {iface} connection (IP: {ip})")
+            return iface, ip
+    return None, None
+
+
+def update_rtc_time():
+    """Update the hardware clock from the internet via timedatectl."""
+    # Throttle: don't sync more than once per hour
+    last = globals().get('_last_time_sync', 0)
+    now = time.time()
+    if now - last < 3600:
+        return
+    globals()['_last_time_sync'] = now
+
+    try:
+        # Re-enable NTP sync via systemd (most reliable on modern Raspberry Pi OS)
+        result = os.system("sudo timedatectl set-ntp 1 2>/dev/null")
+        if result == 0:
+            print("NTP sync triggered via timedatectl")
+        else:
+            print("timedatectl set-ntp 1 failed, trying systemd-timesyncd")
+            os.system("sudo systemctl restart systemd-timesyncd 2>/dev/null")
+        # Wait for systemd to sync, then write to hwclock
+        time.sleep(3)
+        result = os.system("sudo hwclock -w 2>/dev/null")
+        if result == 0:
+            print("Hardware clock updated")
+        else:
+            print("hwclock -w failed (no RTC hardware?)")
+    except Exception as ex:
+        print(f"Time sync error: {ex}")
+
+
+def periodic_time_sync():
+    """Background thread: sync time hourly."""
+    while True:
+        time.sleep(3600)
         try:
-            ip = ni.ifaddresses(interface)[ni.AF_INET][0]['addr']
-            # ni.ifaddresses(interface)[ni.]
-            print(f'{interface} IP address: {ip}')
-            if len(ip) > 7:
-                print(f"Using {interface} connection")
-
-                requests.head('http://google.com', timeout=5)
-                print("True connection to the internet is established")
-                # true_connection = True
-                return ip
-        except Exception as ex:
-            print(f"Connect_Exception: {interface}")
-            print(ex)
-
-        # Needs to ensure a real connection to the internet or continue
-        # to the next adapter.
-    return False
+            if requests.head('http://google.com', timeout=5).status_code == 200:
+                update_rtc_time()
+        except Exception:
+            pass  # No internet, skip this cycle
 
 class StreamingOutput(io.BufferedIOBase):
     def __init__(self):
@@ -1020,55 +1079,6 @@ class StreamingOutput(io.BufferedIOBase):
             self.frame = buf
             logging.debug(f"New frame written: {len(buf)} bytes")
             self.condition.notify_all()
-
-def update_rtc_time():
-    """
-    Update the time from the internet and then set the hardware
-    clock. Note that this can't be checked until on a linux system.
-    """
-    loop_time_set = 10
-    is_set = False
-    # Get the time off of the internet.
-    # os.system("sudo ntpdate time-a-g.nist.gov time-b-g.nist.gov time-c-g.nist.gov time-d-g.nist.gov time-d-g.nist.gov time-e-g.nist.gov time-e-g.nist.gov time-a-wwv.nist.gov time-b-wwv.nist.gov time-c-wwv.nist.gov time-d-wwv.nist.gov time-d-wwv.nist.gov time-e-wwv.nist.gov time-e-wwv.nist.gov time-a-b.nist.gov time-b-b.nist.gov time-c-b.nist.gov time-d-b.nist.gov time-d-b.nist.gov time-e-b.nist.gov time-e-b.nist.gov time.nist.gov utcnist.colorado.edu utcnist2.colorado.edu")
-    while loop_time_set > 0 and is_set == False:
-        try:
-            ## Raspberry Pi 5 method of setting time
-            ## Want to update the time every time the script is run
-            os.system("sudo timedatectl set-ntp False")
-            os.system("sudo timedatectl set-ntp True")
-            is_set = True
-        except:
-            print("couldn't update time from timedatectl command")
-        try:
-            if not is_set:
-                os.system("sudo systemctl restart systemd-timesyncd")
-                is_set = True
-        except:
-            print("couldn't update time from systemctl command")
-
-        try:
-            if not is_set:
-                os.system("sudo ntpdate -q 0.us.pool.ntp.org")
-                is_set = True
-        except Exception as ex:
-            print("couldn't find time")
-        # Set the hardware clock
-        try:
-            if not is_set:
-                os.system("sudo hwclock -w")
-                is_set = True
-        except Exception as ex:
-            print("couldn't hwclock -w")
-
-        try:
-            if not is_set:
-                os.system("sudo hwclock -s")
-                is_set = True
-        except Exception as ex:
-            print("couldn't hwclock -s")
-        time.sleep(5)
-        loop_time_set -= 1
-    return
 
 def reconfigure_camera():
     """Reconfigure the camera with the current ROTATION setting.
@@ -1680,6 +1690,19 @@ if __name__ == '__main__':
 
     print(f"Loaded rotation from config: {ROTATION}°")
     print(f"Detected max native size: {NATIVE_SIZE}")
+
+    # Network detection and initial time sync
+    iface, ip = get_interface_ip()
+    if ip:
+        print(f"Network ready: {iface} ({ip}) — syncing time")
+        update_rtc_time()
+    else:
+        print("No internet connection detected yet — time sync will happen when connected")
+
+    # Start periodic hourly time sync
+    time_sync_thread = Thread(target=periodic_time_sync, daemon=True)
+    time_sync_thread.start()
+
     print(f"Server starting on http://0.0.0.0:{globals()['camera_port']} (local: http://localhost:{globals()['camera_port']})")
     print(f"Streaming rotated {ROTATION}° video at {WIDTH}x{HEIGHT}")
     print("New: Fullscreen view at /full.html")
