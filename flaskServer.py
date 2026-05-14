@@ -822,9 +822,29 @@ function switchTab(e, tabId) {{
     if (modeSelect) {{
         function updateMode() {{
             var mode = modeSelect.value;
-            document.getElementById('interval-fields').style.display = (mode === 'interval') ? 'block' : 'none';
-            document.getElementById('timed-fields').style.display = (mode === 'timed') ? 'block' : 'none';
-            document.getElementById('sunrise-sunset-fields').style.display = (mode === 'sunrise_sunset') ? 'block' : 'none';
+            var intervalFields = document.getElementById('interval-fields');
+            var timedFields = document.getElementById('timed-fields');
+            var ssFields = document.getElementById('sunrise-sunset-fields');
+
+            // Show/hide field groups
+            intervalFields.style.display = (mode === 'interval') ? 'block' : 'none';
+            timedFields.style.display = (mode === 'timed') ? 'block' : 'none';
+            ssFields.style.display = (mode === 'sunrise_sunset') ? 'block' : 'none';
+
+            // Enable only the active field group, disable others
+            var activeFields = mode === 'interval' ? intervalFields : (mode === 'timed' ? timedFields : ssFields);
+            var inactiveFields = mode === 'interval' ? [timedFields, ssFields] :
+                                 (mode === 'timed' ? [intervalFields, ssFields] : [intervalFields, timedFields]);
+
+            // Disable inactive fields
+            inactiveFields.forEach(function(f) {{
+                var inputs = f.querySelectorAll('input, select, textarea');
+                inputs.forEach(function(inp) {{ inp.disabled = true; }});
+            }});
+
+            // Enable active fields
+            var inputs = activeFields.querySelectorAll('input, select, textarea');
+            inputs.forEach(function(inp) {{ inp.disabled = false; }});
         }}
         modeSelect.addEventListener('change', updateMode);
         updateMode();
@@ -907,6 +927,20 @@ function serializeTimedEntries() {{
     if (saveBtn) {{
         saveBtn.addEventListener('click', function() {{
             serializeTimedEntries();
+            // Validate capture mode is set
+            var mode = document.getElementById('capture_mode').value;
+            if (!mode || !['interval', 'timed', 'sunrise_sunset'].includes(mode)) {{
+                alert('Please select a capture mode (interval, timed, or sunrise/sunset).');
+                return;
+            }}
+            // Validate timed mode has at least one entry
+            if (mode === 'timed') {{
+                var entries = document.querySelectorAll('.timed-input');
+                if (entries.length === 0) {{
+                    alert('Please add at least one time for timed capture mode.');
+                    return;
+                }}
+            }}
             var form = document.getElementById('configForm');
             var fd = new FormData(form);
             saveBtn.disabled = true;
