@@ -89,8 +89,6 @@ def load_config():
     for key, value in default_config.items():
         if key not in globals():
             globals()[key] = value
-            configs[key] = value
-            save_config(configs)
 
     globals().update(configs)
 
@@ -119,32 +117,25 @@ def cam_time():
     return cam_time
 
 def save_config(rotation):
-    """Save rotation to config file."""
+    """Save config values to INI file."""
     config = configparser.ConfigParser()
-    configs = {}
+    config.add_section('camera')
     try:
         for key, value in rotation.items():
-            # Convert 'true'/'false' strings to actual booleans for checkbox fields
-            if key in ('embed_timestamp', 'embed_camera_name', 'camera_daylight_savings'):
-                if value == 'true':
-                    value = True
-                elif value == 'false':
-                    value = False
-            configs[key] = value
+            # Convert booleans and non-strings to 'true'/'false' or str for INI storage
+            if isinstance(value, bool):
+                strval = 'true' if value else 'false'
+            else:
+                strval = str(value)
+            config.set('camera', key, strval)
             globals()[key] = value
-        globals().update(configs)
-        config['camera'] = configs
+        globals().update(rotation)
         with open(CONFIG_FILE, 'w') as f:
             config.write(f)
     except Exception as e:
         print(f"Error saving config: {e}")
         import traceback
         traceback.print_exc()
-
-    # print("--==GLOBALS==--")
-    # for key, value in globals().items():
-    #     print(key, '::', value)
-    # print("--==GLOBALS==--")
 
     return True
 
@@ -171,10 +162,16 @@ def get_max_video_size(picam2):
             max_size = size
     return max_size
 
-# Initialize camera early to query modes
-picam2_temp = Picamera2()
-NATIVE_SIZE = get_max_video_size(picam2_temp)
-picam2_temp.close()  # Clean up temp instance
+# Lazy camera detection: try to query sensor modes at import time,
+# fall back to defaults if the camera is unavailable.
+NATIVE_SIZE = None
+try:
+    _picam2_detect = Picamera2()
+    NATIVE_SIZE = get_max_video_size(_picam2_detect)
+    _picam2_detect.close()
+except Exception as e:
+    print(f"Camera detection failed ({e}) — using fallback defaults")
+    NATIVE_SIZE = (2592, 1944)  # 5MP common HQ camera fallback
 
 # Determine output dimensions (swap for 90/270)
 if ROTATION in (90, 270):
@@ -1675,21 +1672,21 @@ if __name__ == '__main__':
         print(f"Restarting on port {restart_port}...")
 
     # Configure camera with detected max size
-    picam2 = Picamera2()
-    config = picam2.create_video_configuration(
-        main={"size": (WIDTH, HEIGHT)},
-        transform=transform
-    )
-    picam2.configure(config)
-
-    # Start recording to output
-    # picam2.start_recording(JpegEncoder(q=85), FileOutput(output))
-    picam2.start_recording(JpegEncoder(q=60), FileOutput(output))
-
-    # logging.basicConfig(level=logging.DEBUG)
-
-    print(f"Loaded rotation from config: {ROTATION}°")
-    print(f"Detected max native size: {NATIVE_SIZE}")
+    try:
+        picam2 = Picamera2()
+        config = picam2.create_video_configuration(
+            main={"size": (WIDTH, HEIGHT)},
+            transform=transform
+        )
+        picam2.configure(config)
+        # Start recording to output
+        # picam2.start_recording(JpegEncoder(q=85), FileOutput(output))
+        picam2.start_recording(JpegEncoder(q=60), FileOutput(output))
+        print(f"Camera initialised: {WIDTH}x{HEIGHT} rotated {ROTATION}°")
+    except Exception as e:
+        print(f"WARNING: Camera failed to initialise ({e})")
+        print("Flask server will start but streaming/capture will not work")
+        picam2 = None
 
     # Network detection and initial time sync
     iface, ip = get_interface_ip()
