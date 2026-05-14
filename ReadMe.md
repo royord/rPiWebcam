@@ -49,6 +49,13 @@ sudo apt autoremove -y
 sudo apt install screen vim nano git python3-netifaces build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev tk-dev libcap-dev build-essential python3-libcamera libcamera-apps libcamera-dev python3-picamera2 python3-libcamera
 ```
 
+Allow passwordless sudo for time sync (required for NTP and hardware clock):
+
+```bash
+echo '%sudo ALL=(ALL) NOPASSWD: /usr/bin/timedatectl, /usr/bin/hwclock, /usr/bin/systemctl' | sudo tee /etc/sudoers.d/time-sync
+sudo chmod 440 /etc/sudoers.d/time-sync
+```
+
 create a public key
 '''
 ssh-keygen -t ed25519 -C "your_email@example.com"
@@ -79,11 +86,20 @@ change directory to the cloned folder
 ```aiignore
 cd rPiWebcam
 ```
-create a virtual environment
+create a virtual environment (must include --system-site-packages to access system libcamera):
 ```aiignore
-python -m venv .venv
+python3 -m venv --system-site-packages venv
 ```
 activate virtual env
 ```aiignore
-source .venv/bin/activate
+source venv/bin/activate
 ```
+install Python packages:
+```aiignore
+pip install -r requirements.txt
+```
+start the server:
+```aiignore
+python flaskServer.py
+```
+The server will start on port 8000. Access the web interface at `http://<camera-ip>:8000`.
