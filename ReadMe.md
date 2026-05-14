@@ -39,3 +39,51 @@ The Raspberry Pi HQ Camera uses a manual-focus lens — twist the lens barrel to
 Additional help if needed:
   https://www.youtube.com/watch?v=ntaXWS8Lk34
   https://www.raspberrypi.com/documentation/computers/getting-started.html
+
+Install base OS libraries:
+
+```
+sudo apt update
+sudo apt dist-upgrade -y
+sudo apt autoremove -y
+sudo apt install screen vim nano git python3-netifaces build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev tk-dev libcap-dev build-essential python3-libcamera libcamera-apps libcamera-dev python3-picamera2 python3-libcamera
+```
+
+create a public key
+'''
+ssh-keygen -t ed25519 -C "your_email@example.com"
+'''
+
+```
+cat .ssh/id_ed25519.pub
+```
+Make sure that the ssh agent is running:
+```aiignore
+eval "$(ssh-agent -s)"
+```
+use the following command to get the content of the public key to add to github profile:
+```
+cat .ssh/id_ed25519.pub
+```
+set the git settings for my user:
+```aiignore
+git config --global user.email "user@domain.com"
+git config --global user.name "user_name"
+```
+
+now clone the repository:
+```
+git clone git@github.com:royord/rPiWebcam.git
+```
+change directory to the cloned folder
+```aiignore
+cd rPiWebcam
+```
+create a virtual environment
+```aiignore
+python -m venv .venv
+```
+activate virtual env
+```aiignore
+source .venv/bin/activate
+```
