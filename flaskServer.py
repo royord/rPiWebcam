@@ -24,7 +24,7 @@ from flask import send_file
 import sys
 import requests
 import netifaces as ni
-import sunset
+import suncalc
 import lib.file_transfer as ft
 
 from PIL import Image, ImageDraw, ImageFont
@@ -1312,36 +1312,34 @@ class UnifiedScheduler:
             sunrise_off = int(globals().get('sunrise_offset', '30'))
             sunset_off = int(globals().get('sunset_offset', '-60'))
 
-            sun = sunset.Sunset(lat, lon, tz_name)
-            sr = sun.sunrise()
-            ss = sun.sunset()
-            if sr is None or ss is None:
-                return
+            # suncalc returns UTC times
+            times = suncalc.get_times(now, lat, lon)
+            sunrise_utc = times['sunrise']
+            sunset_utc = times['sunset']
 
-            # Construct datetime with the sun times, using the camera's timezone
+            # Convert to local timezone
             if tz_name:
                 try:
                     import zoneinfo
                     tz = zoneinfo.ZoneInfo(tz_name)
-                    sunrise_dt = datetime(now.year, now.month, now.day,
-                                          sr.hour, sr.minute, sr.second, tzinfo=tz)
-                    sunset_dt = datetime(now.year, now.month, now.day,
-                                         ss.hour, ss.minute, ss.second, tzinfo=tz)
+                    sunrise_dt = sunrise_utc.replace(tzinfo=zoneinfo.utc).astimezone(tz)
+                    sunset_dt = sunset_utc.replace(tzinfo=zoneinfo.utc).astimezone(tz)
                 except Exception:
-                    sunrise_dt = now.replace(hour=sr.hour, minute=sr.minute, second=sr.second)
-                    sunset_dt = now.replace(hour=ss.hour, minute=ss.minute, second=ss.second)
+                    sunrise_dt = sunrise_utc
+                    sunset_dt = sunset_utc
             else:
-                sunrise_dt = now.replace(hour=sr.hour, minute=sr.minute, second=sr.second)
-                sunset_dt = now.replace(hour=ss.hour, minute=ss.minute, second=ss.second)
+                sunrise_dt = sunrise_utc
+                sunset_dt = sunset_utc
 
             target_sr = sunrise_dt + timedelta(minutes=sunrise_off)
             target_ss = sunset_dt + timedelta(minutes=sunset_off)
 
             # Capture if within a 2-minute window of the target time
-            if abs((now - target_sr).total_seconds()) < 120 and self._should_capture('sr', today):
+            now_naive = datetime.now()
+            if abs((now_naive - target_sr).total_seconds()) < 120 and self._should_capture('sr', today):
                 print(f"Sunrise capture at ~{target_sr.strftime('%H:%M')}")
                 capture_embedded_photo()
-            if abs((now - target_ss).total_seconds()) < 120 and self._should_capture('ss', today):
+            if abs((now_naive - target_ss).total_seconds()) < 120 and self._should_capture('ss', today):
                 print(f"Sunset capture at ~{target_ss.strftime('%H:%M')}")
                 capture_embedded_photo()
         except Exception as e:
