@@ -1487,6 +1487,8 @@ def save_config_route():
     new_first_image_delay = config_key_value.get('time_before_first_image', old_first_image_delay)
     old_image_delay = globals().get('time_before_image', '10')
     new_image_delay = config_key_value.get('time_before_image', old_image_delay)
+    old_capture_mode = globals().get('capture_mode', 'interval')
+    new_capture_mode = config_key_value.get('capture_mode', old_capture_mode)
 
     # Only validate transfer fields if the transfer tab is being saved
     active_tab = config_key_value.get('_active_tab', 'camera')
@@ -1538,6 +1540,23 @@ def save_config_route():
         elif key == "sunset_offset":
             if not value.isnumeric():
                 error_text += f"Invalid sunset_offset: {value}. Must be an integer.\n"
+        elif key == "timed_schedule":
+            try:
+                times = json.loads(value)
+                if not isinstance(times, list):
+                    error_text += f"Invalid timed_schedule: must be a JSON array.\n"
+                else:
+                    for t in times:
+                        if not isinstance(t, str) or len(t) != 5 or t[2] != ':':
+                            error_text += f"Invalid time in timed_schedule: {t}. Format: HH:MM.\n"
+            except json.JSONDecodeError:
+                error_text += f"Invalid timed_schedule: not valid JSON.\n"
+        elif key == "lat":
+            if not value.replace('.', '', 1).isnumeric() or not -90 <= float(value) <= 90:
+                error_text += f"Invalid lat: must be between -90 and 90.\n"
+        elif key == "lon":
+            if not value.replace('.', '', 1).isnumeric() or not -180 <= float(value) <= 180:
+                error_text += f"Invalid lon: must be between -180 and 180.\n"
 
     if len(error_text) > 0:
         return error_text, 400
@@ -1550,6 +1569,11 @@ def save_config_route():
                 restart.set()
         if old_image_delay != new_image_delay:
             print(f"time_before_image changed from {old_image_delay} to {new_image_delay} — signaling background capture...")
+            restart = globals().get('_bg_restart_event')
+            if restart is not None:
+                restart.set()
+        if new_capture_mode != old_capture_mode:
+            print(f"Capture mode changed from {old_capture_mode} to {new_capture_mode} — signaling scheduler restart...")
             restart = globals().get('_bg_restart_event')
             if restart is not None:
                 restart.set()
