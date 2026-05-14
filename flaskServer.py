@@ -1391,7 +1391,7 @@ class UnifiedScheduler:
             for t in times:
                 if t == current_hm and self._should_capture(f'timed_{t}', today):
                     print(f"Timed capture at {t}")
-                    capture_embedded_photo()
+                    do_capture_embedded()
         except Exception as e:
             print(f"Timed schedule error: {e}")
 
@@ -1441,10 +1441,10 @@ class UnifiedScheduler:
             now_naive = datetime.now()
             if abs((now_naive - target_sr).total_seconds()) < 120 and self._should_capture('sr', today):
                 print(f"Sunrise capture at ~{target_sr.strftime('%H:%M')}")
-                capture_embedded_photo()
+                do_capture_embedded()
             if abs((now_naive - target_ss).total_seconds()) < 120 and self._should_capture('ss', today):
                 print(f"Sunset capture at ~{target_ss.strftime('%H:%M')}")
-                capture_embedded_photo()
+                do_capture_embedded()
         except Exception as e:
             print(f"Sunrise/sunset schedule error: {e}")
 
@@ -1966,10 +1966,10 @@ def file_date_string():
     string = time.strftime('%Y%m%d_%H%M%S', current_time())
     return string
 
-@app.route('/capture_embedded.jpg')
-def capture_embedded_photo():
-    """Capture a single high-quality JPEG still from the camera, with embedded text."""
-    print("""Capture a single high-quality JPEG still from the camera, with embedded text.""")
+def do_capture_embedded():
+    """Core capture logic: capture photo, embed text, save to disk, FTP transfer.
+    Called by both /capture_embedded.jpg route and background scheduler."""
+    print("Capturing photo with embedded text...")
     _cleanup_images_throttled()
     script_dir = os.path.dirname(__file__)
     file_prefix = globals().get('file_name', globals()['camera_name'])
@@ -1985,38 +1985,44 @@ def capture_embedded_photo():
     output_buffer = BytesIO()
     background.save(output_buffer, format="jpeg", quality=100)
     output_buffer.seek(0)
-    destination = ""
+
     output_dir = os.path.join(script_dir, globals().get('output_folder', 'image_dir'))
     os.makedirs(output_dir, exist_ok=True)
     file_name = os.path.join(output_dir, f"{file_prefix}_{file_date_string()}.jpg")
-    for dest in globals()['ftp-destination'].split(','):
+    background.save(file_name, format="jpeg")
+
+    # FTP transfer to each destination
+    ftp_dest = globals().get('ftp-destination', '')
+    ftp_mode = globals().get('ftp-mode', 'sftp').lower()
+    for dest in ftp_dest.split(','):
+        dest = dest.strip()
+        if not dest:
+            continue
+        remote_name = file_prefix + '_' + file_date_string() + '.jpg'
         if dest.endswith('/'):
-            destination = dest[:-1]
-            destination = f"{destination}/{file_prefix}_{file_date_string()}.jpg"
+            remote_path = dest + remote_name
         else:
-            destination = f"{dest}"
+            remote_path = dest.rstrip('/') + '/' + remote_name
+        print(f"Transferring: {file_name} -> {remote_path}")
+        try:
+            ft.FileTransfer(
+                globals()['ftp-server'],
+                globals()['ftp-username'],
+                globals()['ftp-password'],
+                ftp_mode.upper(),
+                file_name,
+                remote_path,
+                globals()['ftp-port'],
+            )
+        except Exception as ex:
+            print(f"FTP transfer failed: {ex}")
 
-        print(f"Transfering: {file_name}")
-        print(f"Destination: {destination}")
+    return output_buffer.getvalue()
 
-        background.save(file_name, format="jpeg")
-        if destination != "":
-            try:
-                trasfer = ft.FileTransfer(
-                    globals()['ftp-server'],
-                    globals()['ftp-username'],
-                    globals()['ftp-password'],
-                    'SFTP',
-                    file_name,
-                    # globals()['ftp-destination'],
-                    destination,
-                    globals()['ftp-port'],
-                )
-            except Exception as ex:
-                print("Couldn't transfer file to FTP server.")
-                print(ex)
-
-    return Response(output_buffer.getvalue(), mimetype='image/jpeg')
+@app.route('/capture_embedded.jpg')
+def capture_embedded_photo():
+    """Capture a photo and return it as JPEG response."""
+    return Response(do_capture_embedded(), mimetype='image/jpeg')
 
 def background_capture_task(delay):
     restart_event = globals().get('_bg_restart_event')
@@ -2064,7 +2070,7 @@ def background_capture_task(delay):
                         total_delayed += 1
                         if total_delayed % 10 == 0:
                             print(f"Background thread sleeping for {total_delayed} seconds...")
-            capture_embedded_photo()
+            do_capture_embedded()
         except Exception as ex:
             print("Error in background thread.")
             print(ex)
